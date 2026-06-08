@@ -5,10 +5,6 @@ A self-contained, browser-based SQL practice environment for analyst interview p
 
 🔗 **[Open the live demo →](https://chreyes1986.github.io/SQLite-Practice-module/)**
 
-![Screenshot of the SQL Practice Lab](screenshot.png)
-
-> 📸 *Want this to look polished? After enabling GitHub Pages, take a screenshot of the Query tab and save it as `screenshot.png` in the repo root. The image reference above will pick it up automatically.*
-
 ---
 
 ## What it is
