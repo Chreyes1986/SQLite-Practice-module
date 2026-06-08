@@ -1,0 +1,4184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Clinical Operations — SQL Practice</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+
+<script>
+// Apply persisted theme BEFORE paint to avoid a flash of the wrong theme
+(function () {
+  try {
+    const raw = localStorage.getItem('sql_practice_state_v1');
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s.theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    }
+  } catch (e) {}
+})();
+</script>
+
+<style>
+  :root {
+    /* Dark IDE surfaces */
+    --bg: #1e1f22;
+    --surface: #2b2d30;
+    --surface-2: #3c3f41;
+    --surface-3: #43454a;
+    --surface-tint: #25272a;
+
+    /* Text */
+    --ink: #dfe1e5;
+    --ink-2: #b4b8bf;
+    --ink-3: #868a91;
+    --ink-4: #6f737a;
+
+    /* Borders */
+    --line: #393b40;
+    --line-2: #2e3033;
+    --line-3: #25272a;
+
+    /* Accents (JetBrains-inspired) */
+    --blue: #3574f0;
+    --blue-hover: #4a88e8;
+    --blue-soft: rgba(53, 116, 240, 0.15);
+    --blue-tint: rgba(53, 116, 240, 0.10);
+
+    --green: #5fb865;
+    --green-hover: #6dc472;
+    --green-soft: rgba(95, 184, 101, 0.13);
+
+    --orange: #cc7832;
+    --orange-soft: rgba(204, 120, 50, 0.13);
+
+    --red: #e55765;
+    --red-soft: rgba(229, 87, 101, 0.13);
+
+    --purple: #9876aa;
+    --yellow: #ffc66d;
+
+    /* Shadows (deeper for dark) */
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.35);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,0.5);
+
+    /* Radii — IDE-flat */
+    --r-sm: 4px;
+    --r-md: 6px;
+    --r-lg: 8px;
+    --r-pill: 980px;
+  }
+
+  /* ============================================================
+     LIGHT THEME — warm off-white, paper-feel, elegant
+     ============================================================ */
+  :root[data-theme="light"] {
+    --bg: #faf8f3;
+    --surface: #ffffff;
+    --surface-2: #f4f1ea;
+    --surface-3: #e9e5dc;
+    --surface-tint: #f7f4ed;
+
+    --ink: #2c2823;
+    --ink-2: #4d4842;
+    --ink-3: #7a746a;
+    --ink-4: #a39d92;
+
+    --line: #e2dcd0;
+    --line-2: #ece7dc;
+    --line-3: #f1ece2;
+
+    --blue: #2563cc;
+    --blue-hover: #1f56b8;
+    --blue-soft: rgba(37, 99, 204, 0.10);
+    --blue-tint: rgba(37, 99, 204, 0.06);
+
+    --green: #3a8c47;
+    --green-hover: #327d3e;
+    --green-soft: rgba(58, 140, 71, 0.10);
+
+    --orange: #b85a1d;
+    --orange-soft: rgba(184, 90, 29, 0.10);
+
+    --red: #c2363f;
+    --red-soft: rgba(194, 54, 63, 0.10);
+
+    --purple: #7a4e9e;
+    --yellow: #a8770d;
+
+    --shadow-sm: 0 1px 2px rgba(60, 50, 35, 0.06);
+    --shadow-md: 0 4px 12px rgba(60, 50, 35, 0.08);
+    --shadow-lg: 0 12px 32px rgba(60, 50, 35, 0.10);
+  }
+  [data-theme="light"] ::selection { background: rgba(37, 99, 204, 0.18); }
+  [data-theme="light"] ::-webkit-scrollbar-track { background: var(--bg); }
+  [data-theme="light"] ::-webkit-scrollbar-thumb {
+    background: var(--surface-3);
+    border: 3px solid var(--bg);
+    border-radius: 6px;
+  }
+  /* CodeMirror light syntax */
+  [data-theme="light"] .CodeMirror-cursor { border-left: 1px solid #2c2823 !important; }
+  [data-theme="light"] .CodeMirror-selected,
+  [data-theme="light"] .CodeMirror-line::selection,
+  [data-theme="light"] .CodeMirror-line > span::selection {
+    background: rgba(37, 99, 204, 0.18) !important;
+  }
+  [data-theme="light"] .CodeMirror-focused .CodeMirror-selected {
+    background: rgba(37, 99, 204, 0.22) !important;
+  }
+  [data-theme="light"] .CodeMirror-activeline-background {
+    background: rgba(60, 50, 35, 0.03) !important;
+  }
+  [data-theme="light"] .cm-keyword { color: #b85a1d; }
+  [data-theme="light"] .cm-string  { color: #3a8c47; }
+  [data-theme="light"] .cm-number  { color: #2563cc; }
+  [data-theme="light"] .cm-comment { color: #8a8377; }
+  [data-theme="light"] .cm-atom    { color: #2563cc; }
+  /* Practice tab solution highlighting */
+  [data-theme="light"] .prob-solution .sql-kw  { color: #b85a1d; }
+  [data-theme="light"] .prob-solution .sql-str { color: #3a8c47; }
+  [data-theme="light"] .prob-solution .sql-num { color: #2563cc; }
+  [data-theme="light"] .prob-solution .sql-cmt { color: #8a8377; }
+  /* Status checks: darker for contrast on light */
+  [data-theme="light"] .prob-status.completed { color: #3a8c47; }
+  [data-theme="light"] .prob-status.attempted { color: #a8770d; }
+  /* Run button keeps green bg — ensure text stays readable */
+  [data-theme="light"] #btn-run { color: #ffffff; }
+
+  /* --- Theme toggle button --- */
+  .btn-theme {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink-2);
+    width: 30px;
+    height: 30px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+    padding: 0;
+    font-family: inherit;
+  }
+  .btn-theme:hover {
+    background: var(--surface-2);
+    color: var(--ink);
+    border-color: var(--surface-3);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    min-height: 100vh;
+    padding: 24px 28px 60px;
+    max-width: 1320px;
+    margin: 0 auto;
+  }
+
+  ::selection {
+    background: rgba(53, 116, 240, 0.4);
+  }
+
+  /* Scrollbars — dark IDE */
+  ::-webkit-scrollbar { width: 12px; height: 12px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; border: 3px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--surface-3); }
+
+  /* --- Header --- */
+  header.masthead {
+    margin-bottom: 4px;
+    padding-bottom: 0;
+    border-bottom: none;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .mast-left { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .mast-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    color: var(--ink);
+  }
+  .mast-title em {
+    font-style: normal;
+    font-weight: 400;
+    color: var(--ink-3);
+    margin: 0 4px;
+  }
+  .mast-sub {
+    padding: 10px 0 22px;
+    max-width: 700px;
+    font-family: inherit;
+    font-style: normal;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ink-3);
+  }
+  .mast-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    display: flex;
+    gap: 16px;
+  }
+  .mast-meta span strong { color: var(--ink-2); font-weight: 500; }
+
+  /* --- Tabs (IDE-style) --- */
+  nav.tabs {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 0;
+    gap: 0;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .tab {
+    background: none;
+    border: none;
+    padding: 10px 18px;
+    margin: 0;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--ink-3);
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    position: relative;
+    border-bottom: 2px solid transparent;
+    transition: background 0.12s, color 0.12s;
+  }
+  .tab .num { display: none; }
+  .tab:hover {
+    color: var(--ink);
+    background: rgba(255,255,255,0.03);
+  }
+  .tab.active {
+    color: var(--ink);
+    background: var(--surface-tint);
+    border-bottom-color: var(--blue);
+  }
+  .tab.active::after { display: none; }
+
+  /* --- Panels --- */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* --- Loading strip --- */
+  .loading-strip {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-2);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .loading-strip .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--orange);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  .loading-strip.ready .dot {
+    background: var(--green);
+    animation: none;
+    box-shadow: 0 0 8px rgba(95, 184, 101, 0.5);
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; transform: scale(0.9); }
+    50% { opacity: 1; transform: scale(1.1); }
+  }
+
+  /* --- Module bar (role selector + refresh) --- */
+  .module-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .module-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .mb-label {
+    font-size: 11px;
+    color: var(--ink-3);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .module-dropdown {
+    background: var(--bg);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    padding: 6px 30px 6px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2.5 4.5 L6 8 L9.5 4.5' stroke='%23868a91' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+  }
+  .module-dropdown:hover { border-color: var(--surface-3); }
+  .module-dropdown:focus {
+    outline: none;
+    border-color: var(--blue);
+    box-shadow: 0 0 0 2px var(--blue-soft);
+  }
+  .module-description {
+    font-size: 12.5px;
+    color: var(--ink-3);
+    font-style: italic;
+  }
+  #btn-refresh-data {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* --- Problem loader dropdown (in editor toolbar) --- */
+  .problem-loader {
+    background: var(--bg);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    padding: 4px 26px 4px 10px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'><path d='M2.5 4.5 L6 8 L9.5 4.5' stroke='%23868a91' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    max-width: 260px;
+  }
+  .problem-loader:hover { border-color: var(--surface-3); }
+  .problem-loader:focus {
+    outline: none;
+    border-color: var(--blue);
+    box-shadow: 0 0 0 2px var(--blue-soft);
+  }
+
+  /* --- Problem completion status indicators --- */
+  .prob-status {
+    display: inline-block;
+    width: 16px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1;
+    color: transparent;
+    flex-shrink: 0;
+  }
+  .prob-status.completed { color: #6a9c52; }
+  .prob-status.attempted { color: #d6b656; }
+
+  /* --- About panel --- */
+  .about-card {
+    max-width: 760px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 32px 36px;
+  }
+  .about-card h2 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 14px;
+    color: var(--ink);
+  }
+  .about-card h3 {
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-2);
+    margin: 26px 0 10px;
+  }
+  .about-card p {
+    font-size: 14.5px;
+    line-height: 1.65;
+    color: var(--ink-2);
+    margin: 0 0 12px;
+  }
+  .about-card p strong { color: var(--ink); font-weight: 600; }
+  .about-card em { color: var(--ink); font-style: italic; }
+  .about-card code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 1px 6px;
+    color: var(--yellow, #d6b656);
+  }
+  .about-list {
+    margin: 0 0 12px;
+    padding-left: 22px;
+  }
+  .about-list li {
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--ink-2);
+  }
+  .about-list .prob-status {
+    width: auto;
+    margin: 0 2px;
+  }
+  .about-footer {
+    margin-top: 28px !important;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    font-size: 12.5px !important;
+    color: var(--ink-3) !important;
+  }
+  #btn-reset-progress {
+    margin-top: 4px;
+  }
+
+  /* ============ SCHEMA TAB ============ */
+  .schema-intro {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--ink-2);
+    max-width: 720px;
+    margin-bottom: 24px;
+  }
+  .schema-intro em {
+    font-style: normal;
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .table-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 14px;
+  }
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .table-card:hover {
+    border-color: var(--surface-3);
+  }
+  .tc-head {
+    padding: 12px 16px 10px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--surface-tint);
+  }
+  .tc-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--yellow);
+  }
+  .tc-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+  .tc-desc {
+    padding: 10px 16px 12px;
+    font-family: inherit;
+    font-style: normal;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--ink-3);
+    border-bottom: 1px solid var(--line);
+  }
+  .tc-cols {
+    padding: 6px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .tc-col {
+    padding: 5px 16px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: baseline;
+  }
+  .tc-col .col-name { color: var(--ink); }
+  .tc-col .col-name.pk { color: var(--orange); font-weight: 500; }
+  .tc-col .col-name.fk::before {
+    content: "→ ";
+    color: var(--green);
+  }
+  .tc-col .col-type {
+    color: var(--ink-4);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .tc-foot {
+    border-top: 1px solid var(--line);
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface-tint);
+  }
+  .tc-peek {
+    background: none;
+    border: none;
+    color: var(--blue);
+    font-family: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+    padding: 0;
+  }
+  .tc-peek:hover { text-decoration: underline; }
+  .tc-sample {
+    display: none;
+    border-top: 1px solid var(--line);
+    overflow-x: auto;
+    max-height: 280px;
+    overflow-y: auto;
+    background: var(--bg);
+  }
+  .tc-sample.open { display: block; }
+  .tc-sample table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+  }
+  .tc-sample th {
+    background: var(--surface-2);
+    color: var(--ink-2);
+    text-align: left;
+    padding: 7px 12px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    font-size: 11px;
+  }
+  .tc-sample td {
+    padding: 5px 12px;
+    border-bottom: 1px solid var(--line-2);
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+  .tc-sample tr:hover td { background: rgba(255,255,255,0.03); }
+  .tc-sample tr:last-child td { border-bottom: none; }
+
+  /* ============ QUERY TAB ============ */
+  .query-layout {
+    display: grid;
+    grid-template-columns: 290px 1fr;
+    gap: 14px;
+    align-items: start;
+  }
+  .editor-results-col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  /* --- Schema sidebar (Database Explorer style) --- */
+  .schema-sidebar {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    position: sticky;
+    top: 16px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+  .sidebar-head {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface-2);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  .sidebar-head-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-2);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .sidebar-toggle-all {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--blue);
+    font-family: inherit;
+    font-size: 11.5px;
+    padding: 0;
+  }
+  .sidebar-toggle-all:hover { text-decoration: underline; }
+  .sidebar-table {
+    border-bottom: 1px solid var(--line-2);
+  }
+  .sidebar-table:last-child { border-bottom: none; }
+  .sidebar-table-head {
+    padding: 8px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background 0.1s;
+  }
+  .sidebar-table-head:hover { background: rgba(255,255,255,0.03); }
+  .sidebar-table-head-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sidebar-chev {
+    color: var(--ink-3);
+    font-size: 9px;
+    transition: transform 0.15s;
+    display: inline-block;
+    width: 10px;
+  }
+  .sidebar-table.open .sidebar-chev {
+    transform: rotate(90deg);
+    color: var(--ink-2);
+  }
+  .sidebar-table-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--yellow);
+  }
+  .sidebar-table-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--ink-4);
+  }
+  .sidebar-table-cols {
+    display: none;
+    padding: 4px 0 8px;
+    background: var(--bg);
+  }
+  .sidebar-table.open .sidebar-table-cols { display: block; }
+  .sidebar-col {
+    padding: 3px 14px 3px 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .sidebar-col .sc-name { color: var(--ink); }
+  .sidebar-col .sc-name.pk { color: var(--orange); font-weight: 500; }
+  .sidebar-col .sc-name.fk::before { content: "\2192 "; color: var(--green); }
+  .sidebar-col .sc-type {
+    color: var(--ink-4);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .sidebar-sample-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-4);
+    padding: 8px 14px 4px;
+    margin-top: 4px;
+    border-top: 1px dashed var(--line);
+  }
+  .sidebar-sample {
+    overflow-x: auto;
+    padding: 0 14px 8px;
+  }
+  .sidebar-sample-table {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    border-collapse: collapse;
+    white-space: nowrap;
+  }
+  .sidebar-sample-table th {
+    text-align: left;
+    padding: 4px 10px 4px 0;
+    color: var(--ink-3);
+    font-weight: 500;
+    border-bottom: 1px solid var(--line);
+  }
+  .sidebar-sample-table td {
+    padding: 3px 10px 3px 0;
+    color: var(--ink-2);
+    border-bottom: 1px solid var(--line-2);
+  }
+  .sidebar-sample-table tr:last-child td { border-bottom: none; }
+  .sidebar-sample-table td.null-cell { color: var(--ink-4); font-style: italic; }
+  .sidebar-foot {
+    padding: 10px 14px;
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+    position: sticky;
+    bottom: 0;
+  }
+  .sidebar-foot a {
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--blue);
+    cursor: pointer;
+  }
+  .sidebar-foot a:hover { text-decoration: underline; }
+
+  /* --- Editor panel --- */
+  .editor-panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    overflow: hidden;
+  }
+  .editor-head {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: var(--surface-2);
+  }
+  .editor-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ink-2);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .editor-actions { display: flex; gap: 6px; align-items: center; }
+
+  /* --- Buttons (IDE-style, flat) --- */
+  .btn {
+    background: var(--surface-3);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    padding: 5px 12px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .btn:hover { background: #4f5256; border-color: var(--surface-3); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.ghost {
+    background: transparent;
+    color: var(--ink-2);
+    border-color: transparent;
+  }
+  .btn.ghost:hover {
+    background: rgba(255,255,255,0.06);
+    color: var(--ink);
+    border-color: transparent;
+  }
+  /* Run button — primary green like IDE play */
+  #btn-run {
+    background: var(--green);
+    color: #0f1410;
+    border-color: var(--green);
+    font-weight: 600;
+  }
+  #btn-run:hover { background: var(--green-hover); border-color: var(--green-hover); }
+  #btn-run::before {
+    content: "▶";
+    margin-right: 6px;
+    font-size: 10px;
+  }
+  .btn.check {
+    background: var(--blue);
+    color: white;
+    border-color: var(--blue);
+    font-weight: 500;
+  }
+  .btn.check:hover { background: var(--blue-hover); border-color: var(--blue-hover); }
+  .btn .shortcut {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    opacity: 0.7;
+    margin-left: 6px;
+  }
+
+  /* --- CodeMirror (Darcula-style) --- */
+  .CodeMirror {
+    height: 240px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13.5px;
+    line-height: 1.6;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  .CodeMirror-gutters {
+    background: var(--bg) !important;
+    border-right: 1px solid var(--line) !important;
+  }
+  .CodeMirror-linenumber {
+    color: var(--ink-4) !important;
+    font-size: 11.5px;
+    padding: 0 10px 0 6px;
+  }
+  .CodeMirror-cursor {
+    border-left: 1px solid #ffffff !important;
+  }
+  .CodeMirror-selected, .CodeMirror-line::selection, .CodeMirror-line > span::selection {
+    background: rgba(53, 116, 240, 0.35) !important;
+  }
+  .CodeMirror-focused .CodeMirror-selected {
+    background: rgba(53, 116, 240, 0.35) !important;
+  }
+  .CodeMirror-activeline-background {
+    background: rgba(255,255,255,0.02) !important;
+  }
+  .cm-keyword { color: #cc7832; font-weight: 600; }
+  .cm-string { color: #6a8759; }
+  .cm-number { color: #6897bb; }
+  .cm-comment { color: #808080; font-style: italic; }
+  .cm-operator { color: var(--ink); }
+  .cm-variable, .cm-variable-2 { color: var(--ink); }
+  .cm-atom { color: #6897bb; }
+
+  /* --- Results panel (DataGrip-style grid) --- */
+  .results-panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    min-height: 240px;
+  }
+  .results-head {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface-2);
+  }
+  .results-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--ink-3);
+  }
+  .results-body {
+    overflow: auto;
+    max-height: 560px;
+    background: var(--bg);
+  }
+  .results-empty {
+    padding: 64px 24px;
+    text-align: center;
+    color: var(--ink-3);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+  .results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .results-table th {
+    background: var(--surface-2);
+    color: var(--ink-2);
+    text-align: left;
+    padding: 7px 12px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    white-space: nowrap;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .results-table th:last-child { border-right: none; }
+  .results-table td {
+    padding: 5px 12px;
+    border-bottom: 1px solid var(--line-2);
+    border-right: 1px solid var(--line-3);
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .results-table td:last-child { border-right: none; }
+  .results-table tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
+  .results-table tr:hover td { background: rgba(53, 116, 240, 0.08); }
+  .results-table tr:last-child td { border-bottom: none; }
+  .results-table .null-val { color: var(--ink-4); font-style: italic; }
+
+  .err-box {
+    padding: 14px 18px;
+    background: var(--red-soft);
+    border-left: 3px solid var(--red);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--red);
+    line-height: 1.55;
+  }
+  .ok-msg {
+    padding: 12px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--green);
+  }
+
+  /* --- Problem indicator (active problem in editor) --- */
+  .editor-head-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .problem-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--blue-soft);
+    border: 1px solid rgba(53, 116, 240, 0.3);
+    border-radius: var(--r-sm);
+    padding: 3px 4px 3px 10px;
+  }
+  .pi-label {
+    font-family: inherit;
+    font-size: 10.5px;
+    color: var(--ink-3);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .pi-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--blue);
+    font-weight: 600;
+  }
+  .pi-title {
+    font-style: normal;
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--ink);
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pi-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--ink-3);
+    font-size: 15px;
+    line-height: 1;
+    width: 20px;
+    height: 20px;
+    border-radius: var(--r-sm);
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pi-close:hover { color: var(--ink); background: rgba(255,255,255,0.1); }
+
+  /* --- Check result banner --- */
+  .check-result {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .check-result.check-pass {
+    background: rgba(95, 184, 101, 0.08);
+    border-left: 3px solid var(--green);
+  }
+  .check-result.check-partial {
+    background: rgba(204, 120, 50, 0.08);
+    border-left: 3px solid var(--orange);
+  }
+  .check-result.check-fail {
+    background: rgba(229, 87, 101, 0.08);
+    border-left: 3px solid var(--red);
+  }
+  .cr-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  .cr-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--bg);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .check-pass .cr-icon { background: var(--green); }
+  .check-partial .cr-icon { background: var(--orange); }
+  .check-fail .cr-icon { background: var(--red); }
+  .cr-title {
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .cr-detail {
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.5;
+    padding-left: 36px;
+  }
+  .cr-section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-4);
+    padding: 12px 14px 4px;
+    border-top: 1px solid var(--line);
+    background: var(--surface-2);
+  }
+
+  /* ============ PRACTICE TAB ============ */
+  .practice-intro {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--ink-2);
+    max-width: 720px;
+    margin-bottom: 28px;
+  }
+  .practice-intro em {
+    font-style: normal;
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .difficulty-group { margin-bottom: 32px; }
+  .difficulty-label {
+    font-size: 12px;
+    color: var(--ink-3);
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .difficulty-label strong {
+    font-family: inherit;
+    font-size: 18px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .difficulty-label .dl-tag { color: var(--ink-4); }
+
+  .problem {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    margin-bottom: 8px;
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .problem:hover { border-color: var(--surface-3); }
+  .prob-head {
+    padding: 12px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: background 0.1s;
+  }
+  .prob-head:hover { background: rgba(255,255,255,0.025); }
+  .prob-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--ink-4);
+    min-width: 28px;
+  }
+  .prob-title {
+    font-family: inherit;
+    font-size: 14.5px;
+    font-weight: 500;
+    color: var(--ink);
+    flex: 1;
+  }
+  .prob-toggle {
+    font-family: inherit;
+    font-size: 18px;
+    color: var(--ink-3);
+    transition: transform 0.2s;
+    line-height: 1;
+  }
+  .problem.open .prob-toggle { transform: rotate(45deg); color: var(--blue); }
+  .prob-body {
+    display: none;
+    padding: 0 16px 16px;
+    border-top: 1px solid var(--line);
+  }
+  .problem.open .prob-body { display: block; }
+  .prob-desc {
+    font-family: inherit;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--ink-2);
+    margin: 14px 0 12px;
+  }
+  .prob-tools {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .prob-section {
+    margin-top: 10px;
+    display: none;
+  }
+  .prob-section.open { display: block; }
+  .prob-section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-4);
+    margin-bottom: 6px;
+  }
+  .prob-hint {
+    background: var(--blue-tint);
+    border: 1px solid rgba(53, 116, 240, 0.25);
+    border-radius: var(--r-sm);
+    padding: 12px 14px;
+    font-family: inherit;
+    font-style: normal;
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.5;
+  }
+  .prob-solution {
+    background: var(--bg);
+    color: var(--ink);
+    padding: 14px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--line);
+  }
+  .prob-solution .sql-kw { color: #cc7832; font-weight: 600; }
+  .prob-solution .sql-str { color: #6a8759; }
+  .prob-solution .sql-num { color: #6897bb; }
+  .prob-solution .sql-cmt { color: #808080; font-style: italic; }
+
+  /* footnote */
+  .footnote {
+    margin-top: 40px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    font-family: inherit;
+    font-style: normal;
+    font-size: 12.5px;
+    color: var(--ink-3);
+    max-width: 760px;
+    line-height: 1.6;
+  }
+  .footnote code {
+    font-family: 'JetBrains Mono', monospace;
+    font-style: normal;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11.5px;
+    color: var(--orange);
+  }
+
+  /* ===== responsive ===== */
+  @media (max-width: 960px) {
+    .query-layout {
+      grid-template-columns: 1fr;
+    }
+    .schema-sidebar {
+      position: static;
+      max-height: 320px;
+    }
+    .mast-meta {
+      font-size: 10.5px;
+      gap: 12px;
+    }
+    .about-card {
+      padding: 26px 22px;
+    }
+  }
+  @media (max-width: 720px) {
+    body { padding: 18px 14px 50px; }
+    header.masthead {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .mast-title { font-size: 22px; }
+    .mast-sub { padding: 8px 0 16px; font-size: 13.5px; }
+    .mast-meta { gap: 14px; flex-wrap: wrap; }
+    .module-bar { padding: 10px 12px; gap: 10px; }
+    .module-bar-left { gap: 8px; width: 100%; }
+    .module-dropdown { flex: 1; min-width: 0; }
+    #btn-refresh-data { width: 100%; justify-content: center; }
+    nav.tabs {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    nav.tabs::-webkit-scrollbar { display: none; }
+    .tab { padding: 8px 12px; font-size: 12px; flex-shrink: 0; white-space: nowrap; }
+    .tab .num { display: none; }
+    .table-grid { grid-template-columns: 1fr; }
+    .editor-head {
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px 10px;
+    }
+    .editor-head-left {
+      width: 100%;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .problem-loader { max-width: none; flex: 1; min-width: 0; }
+    .editor-actions { width: 100%; justify-content: flex-end; flex-wrap: wrap; gap: 4px; }
+    .editor-actions .btn { font-size: 12px; padding: 6px 10px; }
+    .editor-actions .shortcut { display: none; }
+    .about-card {
+      padding: 22px 18px;
+    }
+    .about-card h2 { font-size: 19px; }
+    .results-meta { font-size: 11px; }
+    .footnote { font-size: 11px; }
+  }
+  @media (max-width: 480px) {
+    body { padding: 12px 10px 40px; }
+    .mast-title { font-size: 19px; }
+    .module-description { display: none; }
+    .about-card { padding: 18px 14px; }
+    .about-card p { font-size: 13.5px; }
+    .difficulty-label { font-size: 11px; }
+    .prob-title { font-size: 13.5px; }
+    .prob-head { padding: 10px 12px; gap: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="mast-left">
+    <h1 class="mast-title" id="mast-title">Clinical Operations <em>—</em> SQL Practice</h1>
+  </div>
+  <div class="mast-meta">
+    <button class="btn-theme" id="btn-theme" title="Toggle light / dark mode" aria-label="Toggle theme">☀</button>
+    <span>Engine: <strong>SQLite (browser)</strong></span>
+    <span>Built by: <strong>Christian Reyes</strong></span>
+  </div>
+</header>
+
+<div class="mast-sub">
+  A working analyst-practice database with multiple role-specific schemas. Switch roles to see different tables and questions; refresh to regenerate the data.
+</div>
+
+<div class="module-bar">
+  <div class="module-bar-left">
+    <label for="module-select" class="mb-label">Analyst role</label>
+    <select id="module-select" class="module-dropdown">
+      <option value="clinical_ops">Clinical Operations</option>
+      <option value="financial">Financial Analysis</option>
+      <option value="marketing">Marketing Analytics</option>
+    </select>
+    <span class="module-description" id="module-description"></span>
+  </div>
+  <button class="btn ghost" id="btn-refresh-data" title="Regenerate the database with new random data — same questions, different answers">↻ Refresh data</button>
+</div>
+
+<div id="loading" class="loading-strip">
+  <span class="dot"></span>
+  <span id="loading-text">Initializing database engine…</span>
+</div>
+
+<nav class="tabs">
+  <button class="tab active" data-tab="schema"><span class="num">01</span>Schema &amp; Data</button>
+  <button class="tab" data-tab="query"><span class="num">02</span>Query Editor</button>
+  <button class="tab" data-tab="practice"><span class="num">03</span>Practice Problems</button>
+  <button class="tab" data-tab="about"><span class="num">04</span>About</button>
+</nav>
+
+<!-- ============ SCHEMA PANEL ============ -->
+<section class="panel active" id="panel-schema">
+  <p class="schema-intro">
+    Eight tables modeling a mid-sized health system: <em>patient demographics</em>, <em>provider directory</em>, <em>scheduling</em>, <em>encounters</em>, and the clinical detail (<em>diagnoses</em>, <em>procedures</em>) plus payer information. Click <em>view sample rows</em> on any card to inspect the data.
+  </p>
+  <div class="table-grid" id="schema-grid"></div>
+</section>
+
+<!-- ============ QUERY PANEL ============ -->
+<section class="panel" id="panel-query">
+  <div class="query-layout">
+    <aside class="schema-sidebar" id="schema-sidebar">
+      <div class="sidebar-head">
+        <span class="sidebar-head-label">Schema Reference</span>
+        <button class="sidebar-toggle-all" id="sidebar-toggle-all">expand all</button>
+      </div>
+      <div id="sidebar-tables"></div>
+      <div class="sidebar-foot">
+        <a id="sidebar-to-full">View full schema with sample data →</a>
+      </div>
+    </aside>
+    <div class="editor-results-col">
+      <div class="editor-panel">
+      <div class="editor-head">
+        <div class="editor-head-left">
+          <span class="editor-label">SQL Editor</span>
+          <select class="problem-loader" id="problem-loader" title="Quick-load a practice problem">
+            <option value="">Load problem…</option>
+          </select>
+          <div class="problem-indicator" id="problem-indicator" hidden>
+            <span class="pi-label">Working on</span>
+            <span class="pi-num" id="pi-num"></span>
+            <span class="pi-title" id="pi-title"></span>
+            <button class="pi-close" id="pi-close" title="Stop working on this problem">×</button>
+          </div>
+        </div>
+        <div class="editor-actions">
+          <button class="btn ghost" id="btn-clear">Clear</button>
+          <button class="btn ghost" id="btn-reset">Reset DB</button>
+          <button class="btn check" id="btn-check" hidden>Check Answer</button>
+          <button class="btn" id="btn-run">Run<span class="shortcut">⌘↵</span></button>
+        </div>
+      </div>
+      <textarea id="editor"></textarea>
+    </div>
+    <div class="results-panel">
+      <div class="results-head">
+        <span class="editor-label">Results</span>
+        <span class="results-meta" id="results-meta">—</span>
+      </div>
+      <div class="results-body" id="results-body">
+        <div class="results-empty">Write a query and hit Run.</div>
+      </div>
+    </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRACTICE PANEL ============ -->
+<section class="panel" id="panel-practice">
+  <p class="practice-intro">
+    Thirty problems per role, organized by difficulty. Each one mirrors a question an analyst gets asked in real life. Click <em>Load into Editor</em> (or use the dropdown in the Query tab), write your query, then hit <em>Check Answer</em> — it compares your output against the expected result and tells you what's off. Completed problems get a green check, attempted ones get yellow.
+  </p>
+  <div id="practice-list"></div>
+</section>
+
+<section class="panel" id="panel-about">
+  <div class="about-card">
+    <h2>About this project</h2>
+    <p>
+      A self-contained SQL practice environment that runs entirely in your browser — no server, no install, no signup. It serves two parallel practice purposes:
+    </p>
+    <h3>1 · Data analysis practice</h3>
+    <p>
+      Three role-specific schemas (Clinical Operations, Financial Analysis, Marketing Analytics), each with realistic generated data and 30 progressively harder problems. <strong>Beginner</strong> covers SELECT, WHERE, ORDER BY, LIMIT, DISTINCT. <strong>Intermediate</strong> adds JOINs, GROUP BY, aggregation, and HAVING. <strong>Advanced</strong> introduces window functions (RANK, LAG, NTILE), CTEs, self-joins, and date math. Hit <em>Refresh data</em> to regenerate the database with new random values — same questions, different answers.
+    </p>
+    <h3>2 · AI-assisted creation practice</h3>
+    <p>
+      Building real applications iteratively with AI is a skill in its own right — breaking down a project, validating output, and directing the AI through revisions. This tool was built that way, end-to-end with <strong>Claude (Anthropic's AI assistant)</strong>: spec, scaffold, test, refine. The whole thing is a single HTML file, deliberately, so it can be read end-to-end like a tutorial in how to compose a working app from clear sub-goals.
+    </p>
+    <h3>How to use</h3>
+    <ol class="about-list">
+      <li>Pick a role from the <em>Analyst role</em> dropdown at the top.</li>
+      <li>Read the schema (Schema tab) or use the sidebar reference next to the editor.</li>
+      <li>Pick a problem from the dropdown in the Query tab, or browse the Practice tab.</li>
+      <li>Write your query, click <em>Run</em> to see results, click <em>Check Answer</em> to grade against the solution.</li>
+      <li>Status icons: <span class="prob-status completed">✓</span> green = completed · <span class="prob-status attempted">✓</span> yellow = attempted.</li>
+    </ol>
+    <h3>Progress</h3>
+    <p>
+      Status and your selected role persist in this browser via <code>localStorage</code>. You can clear it any time:
+    </p>
+    <button class="btn ghost" id="btn-reset-progress">Reset all progress</button>
+    <p class="about-footer">
+      Built by <strong>Christian Reyes</strong> with <strong>Claude</strong> (Anthropic). Engine: SQLite (WebAssembly) via sql.js. Editor: CodeMirror.
+    </p>
+  </div>
+</section>
+
+<p class="footnote">
+  This runs on SQLite in your browser, which uses near-identical SQL to MySQL for everything you'll be tested on. Three things to know when you move to MySQL: date math is <code>DATE_SUB(d, INTERVAL 30 DAY)</code> instead of <code>date(d, '-30 days')</code>; string concatenation is <code>CONCAT(a, b)</code> instead of <code>a || b</code>; and you can use backticks <code>`col`</code> for identifiers. Window functions, CTEs, JOINs, GROUP BY, CASE — all identical.
+</p>
+
+<script>
+/* ============================================================
+   SEEDED RNG — deterministic data so practice answers are stable
+   ============================================================ */
+let _seed = 20250604;
+function rand() {
+  _seed = (_seed * 1103515245 + 12345) & 0x7fffffff;
+  return _seed / 0x7fffffff;
+}
+function randInt(min, max) { return Math.floor(rand() * (max - min + 1)) + min; }
+function pick(arr) { return arr[Math.floor(rand() * arr.length)]; }
+function pickWeighted(items) {
+  // items: [[value, weight], ...]
+  const total = items.reduce((s, x) => s + x[1], 0);
+  let r = rand() * total;
+  for (const [v, w] of items) { r -= w; if (r <= 0) return v; }
+  return items[items.length - 1][0];
+}
+function dateAdd(base, days) {
+  const d = new Date(base); d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+function dateTimeAdd(base, days, hour, minute) {
+  const d = new Date(base); d.setDate(d.getDate() + days);
+  d.setHours(hour, minute, 0, 0);
+  return d.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+/* ============================================================
+   MODULE DEFINITIONS — each analyst role has its own schema,
+   reference data, generator, and (later) problems.
+   ============================================================ */
+
+// === Shared name pools ===
+const FIRST_NAMES = ['Olivia','Noah','Emma','Liam','Ava','Mateo','Sophia','Lucas','Isabella','Ethan','Mia','Jacob','Amelia','Aiden','Harper','Logan','Charlotte','Elijah','Evelyn','James','Abigail','Benjamin','Emily','Daniel','Ella','Henry','Madison','Alexander','Scarlett','Michael','Grace','Sebastian','Chloe','David','Penelope','Joseph','Layla','Samuel','Riley','Carter','Zoe','Anthony','Nora','Dylan','Lily','Wyatt','Eleanor','Andrew','Hazel','Joshua'];
+const LAST_NAMES = ['Garcia','Smith','Johnson','Williams','Brown','Jones','Miller','Davis','Rodriguez','Martinez','Hernandez','Lopez','Gonzalez','Wilson','Anderson','Thomas','Taylor','Moore','Jackson','Martin','Lee','Perez','Thompson','White','Harris','Sanchez','Clark','Ramirez','Lewis','Robinson','Walker','Young','Allen','King','Wright','Scott','Torres','Nguyen','Hill','Flores','Green','Adams','Nelson','Baker','Hall','Rivera','Campbell','Mitchell','Carter','Roberts'];
+const COMPANIES = ['Apex Industries','Beacon Solutions','Catalyst Group','Drayton Holdings','Emerald Partners','Fairway Networks','Greenfield Inc','Hartwell Systems','Ironclad Logistics','Juniper Analytics','Keystone Dynamics','Lighthouse Labs','Meridian Tech','Northstar Capital','Oakwood Enterprises','Pinnacle Manufacturing','Quill Software','Redwood Ventures','Summit Resources','Tidewater Solutions','Unity Forge','Vanguard Materials','Westbrook & Co','Xenith Corp','Yellowstone Brands','Zenith Robotics','Atlas Bioworks','Brightline Media','Cascade Energy','Driftwood Imports','Evergreen Holdings','Flatiron Group','Glacier Networks','Horizon Pharmaceuticals'];
+
+/* ============================================================
+   CLINICAL OPERATIONS MODULE
+   ============================================================ */
+const SCHEMA_CLINICAL = `
+CREATE TABLE departments (
+  department_id   INTEGER PRIMARY KEY,
+  department_name TEXT NOT NULL,
+  location        TEXT NOT NULL
+);
+CREATE TABLE insurance (
+  insurance_id INTEGER PRIMARY KEY,
+  payer_name   TEXT NOT NULL,
+  plan_type    TEXT NOT NULL
+);
+CREATE TABLE providers (
+  provider_id   INTEGER PRIMARY KEY,
+  first_name    TEXT NOT NULL,
+  last_name     TEXT NOT NULL,
+  specialty     TEXT NOT NULL,
+  department_id INTEGER NOT NULL,
+  hire_date     DATE NOT NULL,
+  FOREIGN KEY (department_id) REFERENCES departments(department_id)
+);
+CREATE TABLE patients (
+  patient_id   INTEGER PRIMARY KEY,
+  first_name   TEXT NOT NULL,
+  last_name    TEXT NOT NULL,
+  dob          DATE NOT NULL,
+  gender       TEXT NOT NULL,
+  zip_code     TEXT NOT NULL,
+  insurance_id INTEGER,
+  FOREIGN KEY (insurance_id) REFERENCES insurance(insurance_id)
+);
+CREATE TABLE appointments (
+  appointment_id     INTEGER PRIMARY KEY,
+  patient_id         INTEGER NOT NULL,
+  provider_id        INTEGER NOT NULL,
+  department_id      INTEGER NOT NULL,
+  scheduled_datetime DATETIME NOT NULL,
+  appointment_type   TEXT NOT NULL,
+  status             TEXT NOT NULL,
+  wait_time_minutes  INTEGER,
+  FOREIGN KEY (patient_id)    REFERENCES patients(patient_id),
+  FOREIGN KEY (provider_id)   REFERENCES providers(provider_id),
+  FOREIGN KEY (department_id) REFERENCES departments(department_id)
+);
+CREATE TABLE encounters (
+  encounter_id    INTEGER PRIMARY KEY,
+  patient_id      INTEGER NOT NULL,
+  provider_id     INTEGER NOT NULL,
+  department_id   INTEGER NOT NULL,
+  admission_date  DATE NOT NULL,
+  discharge_date  DATE,
+  encounter_type  TEXT NOT NULL,
+  length_of_stay  INTEGER,
+  FOREIGN KEY (patient_id)    REFERENCES patients(patient_id),
+  FOREIGN KEY (provider_id)   REFERENCES providers(provider_id),
+  FOREIGN KEY (department_id) REFERENCES departments(department_id)
+);
+CREATE TABLE diagnoses (
+  diagnosis_id          INTEGER PRIMARY KEY,
+  encounter_id          INTEGER NOT NULL,
+  icd_code              TEXT NOT NULL,
+  diagnosis_description TEXT NOT NULL,
+  is_primary            INTEGER NOT NULL,
+  FOREIGN KEY (encounter_id) REFERENCES encounters(encounter_id)
+);
+CREATE TABLE procedures (
+  procedure_id          INTEGER PRIMARY KEY,
+  encounter_id          INTEGER NOT NULL,
+  cpt_code              TEXT NOT NULL,
+  procedure_description TEXT NOT NULL,
+  procedure_date        DATE NOT NULL,
+  cost                  REAL NOT NULL,
+  FOREIGN KEY (encounter_id) REFERENCES encounters(encounter_id)
+);
+`;
+
+const REF_CLINICAL = {
+  departments: [
+    [1, 'Cardiology', 'Building A — 3rd Floor'],
+    [2, 'Emergency', 'Building B — Ground'],
+    [3, 'Orthopedics', 'Building A — 2nd Floor'],
+    [4, 'Internal Medicine', 'Building C — 1st Floor'],
+    [5, 'Pediatrics', 'Building D — 2nd Floor'],
+    [6, 'Oncology', 'Building A — 4th Floor'],
+  ],
+  insurance: [
+    [1, 'Medicare', 'Government'],
+    [2, 'Medicaid', 'Government'],
+    [3, 'Blue Cross Blue Shield', 'Commercial PPO'],
+    [4, 'Aetna', 'Commercial PPO'],
+    [5, 'UnitedHealthcare', 'Commercial HMO'],
+    [6, 'Self-Pay', 'Uninsured'],
+  ],
+  providers: [
+    [1, 'Aanya', 'Rao', 'Interventional Cardiology', 1, '2015-06-12'],
+    [2, 'Marcus', 'Whitfield', 'General Cardiology', 1, '2018-09-01'],
+    [3, 'Elena', 'Petrov', 'Electrophysiology', 1, '2012-03-18'],
+    [4, 'Jordan', 'Okafor', 'Emergency Medicine', 2, '2017-07-22'],
+    [5, 'Priya', 'Shah', 'Emergency Medicine', 2, '2020-01-15'],
+    [6, 'Daniel', 'Reyes', 'Emergency Medicine', 2, '2014-11-04'],
+    [7, 'Hannah', 'Lindqvist', 'Sports Medicine', 3, '2016-08-30'],
+    [8, 'Omar', 'Haddad', 'Joint Replacement', 3, '2011-02-14'],
+    [9, 'Sarah', 'Kim', 'General Internal Medicine', 4, '2019-04-08'],
+    [10, 'Robert', 'Chen', 'Geriatrics', 4, '2013-10-20'],
+    [11, 'Beatrice', 'Mwangi', 'General Internal Medicine', 4, '2021-06-01'],
+    [12, 'Lukas', 'Berger', 'Endocrinology', 4, '2017-03-12'],
+    [13, 'Maya', 'Patel', 'General Pediatrics', 5, '2018-08-15'],
+    [14, 'James', 'O\u2019Brien', 'Pediatric Pulmonology', 5, '2014-09-05'],
+    [15, 'Sofia', 'Vargas', 'General Pediatrics', 5, '2022-01-10'],
+    [16, 'Henry', 'Adesanya', 'Medical Oncology', 6, '2010-05-25'],
+    [17, 'Wei', 'Zhang', 'Hematology-Oncology', 6, '2016-11-30'],
+    [18, 'Clara', 'Bauer', 'Radiation Oncology', 6, '2019-07-14'],
+  ],
+  zips: ['32601','32605','32607','32608','32609','34470','34471','34472','34473','34474','34475','32117','32118','32119'],
+  apptTypes: {
+    1: ['Follow-up','New Patient Consult','Echocardiogram','Stress Test'],
+    2: ['Walk-in','Triage'],
+    3: ['Follow-up','New Patient Consult','Pre-op','Post-op'],
+    4: ['Annual Physical','Follow-up','New Patient Consult','Chronic Care'],
+    5: ['Well-Child Visit','Sick Visit','Vaccination','Follow-up'],
+    6: ['Infusion','Follow-up','New Patient Consult','Treatment Planning'],
+  },
+  icd: {
+    1: [['I10','Essential hypertension'],['I25.10','Atherosclerotic heart disease'],['I48.91','Atrial fibrillation, unspecified'],['I50.9','Heart failure, unspecified'],['I21.4','Non-ST elevation myocardial infarction']],
+    2: [['R07.9','Chest pain, unspecified'],['R10.9','Abdominal pain, unspecified'],['S06.0X0A','Concussion without LOC'],['J45.901','Unspecified asthma with exacerbation'],['N39.0','Urinary tract infection'],['R55','Syncope and collapse']],
+    3: [['M17.11','Unilateral primary osteoarthritis, right knee'],['M54.5','Low back pain'],['S52.501A','Fracture of right radius'],['M75.101','Rotator cuff tear, right shoulder'],['M25.561','Pain in right knee']],
+    4: [['E11.9','Type 2 diabetes mellitus without complications'],['E78.5','Hyperlipidemia, unspecified'],['I10','Essential hypertension'],['E11.65','Type 2 diabetes with hyperglycemia'],['K21.9','GERD without esophagitis'],['Z00.00','General adult medical exam']],
+    5: [['J06.9','Acute upper respiratory infection'],['H66.90','Otitis media, unspecified'],['Z00.129','Routine child health exam'],['J45.909','Unspecified asthma, uncomplicated'],['A09','Infectious gastroenteritis']],
+    6: [['C50.911','Malignant neoplasm of right female breast'],['C18.9','Malignant neoplasm of colon, unspecified'],['C34.91','Malignant neoplasm of right bronchus or lung'],['Z51.11','Encounter for antineoplastic chemotherapy'],['D63.0','Anemia in neoplastic disease']],
+  },
+  cpt: {
+    1: [['93306','Echocardiogram complete', 850],['93000','Electrocardiogram, routine', 175],['93015','Cardiovascular stress test', 425],['99214','Office visit, established, level 4', 200]],
+    2: [['99284','ED visit, level 4', 540],['99285','ED visit, level 5', 780],['71046','Chest X-ray, 2 views', 220],['80048','Basic metabolic panel', 95]],
+    3: [['27447','Total knee arthroplasty', 18500],['29881','Knee arthroscopy with meniscectomy', 4200],['73721','MRI lower extremity joint', 1100],['99213','Office visit, established, level 3', 145]],
+    4: [['99214','Office visit, established, level 4', 200],['99396','Periodic preventive exam, adult', 280],['80053','Comprehensive metabolic panel', 110],['83036','Hemoglobin A1C', 65]],
+    5: [['99392','Periodic preventive exam, child', 220],['90686','Influenza vaccine', 45],['99213','Office visit, established, level 3', 145],['87880','Strep test, rapid', 55]],
+    6: [['96413','Chemotherapy infusion, first hour', 1100],['77427','Radiation treatment management', 360],['85025','Complete blood count', 75],['99215','Office visit, established, level 5', 285]],
+  },
+};
+
+function generateClinicalData() {
+  const data = { departments: [], insurance: [], providers: [], patients: [], appointments: [], encounters: [], diagnoses: [], procedures: [] };
+  for (const d of REF_CLINICAL.departments) data.departments.push(d);
+  for (const i of REF_CLINICAL.insurance) data.insurance.push(i);
+  for (const p of REF_CLINICAL.providers) data.providers.push(p);
+
+  for (let pid = 1; pid <= 60; pid++) {
+    const dob = `${randInt(1935, 2018)}-${String(randInt(1,12)).padStart(2,'0')}-${String(randInt(1,28)).padStart(2,'0')}`;
+    data.patients.push([pid, pick(FIRST_NAMES), pick(LAST_NAMES), dob, pick(['F','M','F','M','M','F']), pick(REF_CLINICAL.zips), pickWeighted([[1,30],[2,15],[3,25],[4,15],[5,10],[6,5]])]);
+  }
+
+  let aid = 1;
+  const apptStart = '2025-01-01';
+  for (let i = 0; i < 280; i++) {
+    const patient_id = randInt(1, 60);
+    const dept = pickWeighted([[1,18],[2,30],[3,15],[4,40],[5,25],[6,12]]);
+    const provider = pick(REF_CLINICAL.providers.filter(p => p[4] === dept))[0];
+    const sched = dateTimeAdd(apptStart, randInt(0, 348), randInt(8, 16), pick([0,15,30,45]));
+    const status = dept === 2 ? pickWeighted([['Completed',92],['No-Show',4],['Cancelled',4]]) : pickWeighted([['Completed',72],['No-Show',14],['Cancelled',14]]);
+    const wait = status === 'Completed' ? (dept === 2 ? randInt(25, 180) : randInt(5, 55)) : null;
+    data.appointments.push([aid++, patient_id, provider, dept, sched, pick(REF_CLINICAL.apptTypes[dept]), status, wait]);
+  }
+
+  let eid = 1;
+  for (let i = 0; i < 90; i++) {
+    const patient_id = randInt(1, 60);
+    const enc_type = pickWeighted([['Outpatient',50],['ER',25],['Inpatient',25]]);
+    let dept, los;
+    if (enc_type === 'ER') { dept = 2; los = pick([0,0,0,1]); }
+    else if (enc_type === 'Inpatient') { dept = pickWeighted([[1,4],[3,2],[4,5],[5,1],[6,3]]); los = randInt(1, 12); }
+    else { dept = pickWeighted([[1,3],[3,2],[4,5],[5,4],[6,3]]); los = 0; }
+    const provider = pick(REF_CLINICAL.providers.filter(p => p[4] === dept))[0];
+    const admit = randInt(0, 340);
+    const admission = dateAdd(apptStart, admit);
+    const discharge = los > 0 ? dateAdd(apptStart, admit + los) : admission;
+    data.encounters.push([eid++, patient_id, provider, dept, admission, discharge, enc_type, los]);
+  }
+
+  let did = 1;
+  for (const enc of data.encounters) {
+    const pool = REF_CLINICAL.icd[enc[3]];
+    const count = pickWeighted([[1,50],[2,35],[3,15]]);
+    const picked = new Set();
+    for (let k = 0; k < count; k++) {
+      let dx; let tries = 0;
+      do { dx = pick(pool); tries++; } while (picked.has(dx[0]) && tries < 6);
+      picked.add(dx[0]);
+      data.diagnoses.push([did++, enc[0], dx[0], dx[1], k === 0 ? 1 : 0]);
+    }
+  }
+
+  let prid = 1;
+  for (const enc of data.encounters) {
+    const pool = REF_CLINICAL.cpt[enc[3]];
+    const count = enc[6] === 'Inpatient' ? pickWeighted([[1,20],[2,40],[3,40]]) : enc[6] === 'ER' ? pickWeighted([[0,10],[1,50],[2,40]]) : pickWeighted([[0,25],[1,60],[2,15]]);
+    for (let k = 0; k < count; k++) {
+      const proc = pick(pool);
+      const offset = randInt(0, Math.max(1, enc[7] || 1));
+      const cost = +(proc[2] * (0.9 + rand() * 0.2)).toFixed(2);
+      data.procedures.push([prid++, enc[0], proc[0], proc[1], dateAdd(enc[4], offset), cost]);
+    }
+  }
+  return data;
+}
+
+/* ============================================================
+   FINANCIAL ANALYSIS MODULE
+   ============================================================ */
+const SCHEMA_FINANCIAL = `
+CREATE TABLE departments (
+  department_id   INTEGER PRIMARY KEY,
+  department_name TEXT NOT NULL,
+  cost_center     TEXT NOT NULL,
+  region          TEXT NOT NULL
+);
+CREATE TABLE customers (
+  customer_id    INTEGER PRIMARY KEY,
+  company_name   TEXT NOT NULL,
+  industry       TEXT NOT NULL,
+  region         TEXT NOT NULL,
+  segment        TEXT NOT NULL,
+  signup_date    DATE NOT NULL,
+  annual_revenue REAL
+);
+CREATE TABLE products (
+  product_id   INTEGER PRIMARY KEY,
+  product_name TEXT NOT NULL,
+  category     TEXT NOT NULL,
+  unit_price   REAL NOT NULL,
+  unit_cost    REAL NOT NULL
+);
+CREATE TABLE orders (
+  order_id     INTEGER PRIMARY KEY,
+  customer_id  INTEGER NOT NULL,
+  product_id   INTEGER NOT NULL,
+  order_date   DATE NOT NULL,
+  quantity     INTEGER NOT NULL,
+  total_amount REAL NOT NULL,
+  FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
+  FOREIGN KEY (product_id)  REFERENCES products(product_id)
+);
+CREATE TABLE invoices (
+  invoice_id   INTEGER PRIMARY KEY,
+  customer_id  INTEGER NOT NULL,
+  invoice_date DATE NOT NULL,
+  due_date     DATE NOT NULL,
+  amount       REAL NOT NULL,
+  status       TEXT NOT NULL,
+  FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+);
+CREATE TABLE payments (
+  payment_id     INTEGER PRIMARY KEY,
+  invoice_id     INTEGER NOT NULL,
+  payment_date   DATE NOT NULL,
+  amount         REAL NOT NULL,
+  payment_method TEXT NOT NULL,
+  FOREIGN KEY (invoice_id) REFERENCES invoices(invoice_id)
+);
+CREATE TABLE expenses (
+  expense_id       INTEGER PRIMARY KEY,
+  department_id    INTEGER NOT NULL,
+  expense_category TEXT NOT NULL,
+  expense_date     DATE NOT NULL,
+  amount           REAL NOT NULL,
+  vendor           TEXT NOT NULL,
+  FOREIGN KEY (department_id) REFERENCES departments(department_id)
+);
+`;
+
+const REF_FINANCIAL = {
+  departments: [
+    [1, 'Sales', 'CC-1001', 'North America'],
+    [2, 'Marketing', 'CC-1002', 'North America'],
+    [3, 'Engineering', 'CC-1003', 'North America'],
+    [4, 'Customer Success', 'CC-1004', 'EMEA'],
+    [5, 'Operations', 'CC-1005', 'APAC'],
+    [6, 'Finance', 'CC-1006', 'North America'],
+    [7, 'HR', 'CC-1007', 'North America'],
+    [8, 'Product', 'CC-1008', 'EMEA'],
+  ],
+  industries: ['Software','Manufacturing','Healthcare','Retail','Finance','Education','Logistics','Energy'],
+  segments: ['SMB','Mid-Market','Enterprise'],
+  regions: ['North America','EMEA','APAC','LATAM'],
+  products: [
+    [1, 'Analytics Platform - Starter', 'Software', 2400, 480],
+    [2, 'Analytics Platform - Pro', 'Software', 7200, 1200],
+    [3, 'Analytics Platform - Enterprise', 'Software', 24000, 3500],
+    [4, 'Data Connector Bundle', 'Software', 1800, 360],
+    [5, 'Implementation Services', 'Services', 12000, 7500],
+    [6, 'Premium Support', 'Services', 4800, 1800],
+    [7, 'Training Workshop', 'Services', 3500, 1200],
+    [8, 'Custom Integration', 'Services', 18000, 11000],
+    [9, 'API Access - Standard', 'Subscription', 600, 60],
+    [10, 'API Access - Premium', 'Subscription', 2400, 240],
+    [11, 'Storage Add-on', 'Subscription', 1200, 200],
+    [12, 'Compliance Module', 'Software', 9600, 1500],
+  ],
+  expenseCategories: ['Salaries','Cloud Infrastructure','Software Licenses','Travel','Marketing Programs','Office & Facilities','Professional Services','Equipment'],
+  vendors: ['AWS','Salesforce','Adobe','Workday','HubSpot','Atlassian','Slack','LinkedIn','Google Cloud','Microsoft Azure','WeWork','Concur Travel','Deloitte','Accenture','Snowflake'],
+  paymentMethods: ['Wire Transfer','ACH','Credit Card','Check'],
+};
+
+function generateFinancialData() {
+  const data = { departments: [], customers: [], products: [], orders: [], invoices: [], payments: [], expenses: [] };
+  for (const d of REF_FINANCIAL.departments) data.departments.push(d);
+  for (const p of REF_FINANCIAL.products) data.products.push(p);
+
+  // 50 customers
+  for (let cid = 1; cid <= 50; cid++) {
+    const company = COMPANIES[(cid - 1) % COMPANIES.length] + (cid > COMPANIES.length ? ` ${Math.ceil(cid / COMPANIES.length)}` : '');
+    const seg = pickWeighted([['SMB',45],['Mid-Market',35],['Enterprise',20]]);
+    const annual = seg === 'Enterprise' ? randInt(50000000, 800000000) : seg === 'Mid-Market' ? randInt(5000000, 50000000) : randInt(500000, 5000000);
+    const signupDay = randInt(0, 700); // ~Jan 2024 through Dec 2025
+    data.customers.push([cid, company, pick(REF_FINANCIAL.industries), pick(REF_FINANCIAL.regions), seg, dateAdd('2024-01-01', signupDay), annual]);
+  }
+
+  // 300 orders
+  let oid = 1;
+  for (let i = 0; i < 300; i++) {
+    const cust = randInt(1, 50);
+    const prod = REF_FINANCIAL.products[randInt(0, REF_FINANCIAL.products.length - 1)];
+    const qty = pickWeighted([[1, 60], [2, 25], [3, 10], [5, 5]]);
+    const total = +(prod[3] * qty * (0.85 + rand() * 0.3)).toFixed(2); // some discount/markup
+    const orderDay = randInt(0, 700);
+    data.orders.push([oid++, cust, prod[0], dateAdd('2024-01-01', orderDay), qty, total]);
+  }
+
+  // 220 invoices
+  let invid = 1;
+  for (let i = 0; i < 220; i++) {
+    const cust = randInt(1, 50);
+    const invDay = randInt(0, 690);
+    const invDate = dateAdd('2024-01-01', invDay);
+    const dueDate = dateAdd(invDate, 30);
+    const amount = +(randInt(1000, 50000) * (0.5 + rand())).toFixed(2);
+    // Status weighting depends on how old the invoice is
+    const isOld = invDay < 600;
+    const status = isOld ? pickWeighted([['Paid', 75], ['Overdue', 20], ['Pending', 5]]) : pickWeighted([['Paid', 45], ['Pending', 40], ['Overdue', 15]]);
+    data.invoices.push([invid++, cust, invDate, dueDate, amount, status]);
+  }
+
+  // payments — one per Paid invoice (within 5-45 days of invoice date)
+  let payid = 1;
+  for (const inv of data.invoices) {
+    if (inv[5] !== 'Paid') continue;
+    const daysAfter = randInt(5, 45);
+    const payDate = dateAdd(inv[2], daysAfter);
+    data.payments.push([payid++, inv[0], payDate, inv[4], pick(REF_FINANCIAL.paymentMethods)]);
+  }
+
+  // 120 expenses
+  let exid = 1;
+  for (let i = 0; i < 120; i++) {
+    const dept = randInt(1, 8);
+    const cat = pick(REF_FINANCIAL.expenseCategories);
+    const exDay = randInt(0, 700);
+    const baseAmt = cat === 'Salaries' ? randInt(15000, 90000) : cat === 'Cloud Infrastructure' ? randInt(5000, 60000) : cat === 'Software Licenses' ? randInt(2000, 25000) : randInt(500, 15000);
+    data.expenses.push([exid++, dept, cat, dateAdd('2024-01-01', exDay), baseAmt, pick(REF_FINANCIAL.vendors)]);
+  }
+
+  return data;
+}
+
+/* ============================================================
+   MARKETING ANALYTICS MODULE
+   ============================================================ */
+const SCHEMA_MARKETING = `
+CREATE TABLE channels (
+  channel_id   INTEGER PRIMARY KEY,
+  channel_name TEXT NOT NULL,
+  channel_type TEXT NOT NULL
+);
+CREATE TABLE campaigns (
+  campaign_id   INTEGER PRIMARY KEY,
+  campaign_name TEXT NOT NULL,
+  channel_id    INTEGER NOT NULL,
+  start_date    DATE NOT NULL,
+  end_date      DATE,
+  budget        REAL NOT NULL,
+  status        TEXT NOT NULL,
+  FOREIGN KEY (channel_id) REFERENCES channels(channel_id)
+);
+CREATE TABLE leads (
+  lead_id           INTEGER PRIMARY KEY,
+  source_channel_id INTEGER NOT NULL,
+  campaign_id       INTEGER,
+  created_date      DATE NOT NULL,
+  status            TEXT NOT NULL,
+  lead_score        INTEGER NOT NULL,
+  FOREIGN KEY (source_channel_id) REFERENCES channels(channel_id),
+  FOREIGN KEY (campaign_id)       REFERENCES campaigns(campaign_id)
+);
+CREATE TABLE customers (
+  customer_id            INTEGER PRIMARY KEY,
+  lead_id                INTEGER,
+  conversion_date        DATE NOT NULL,
+  acquisition_channel_id INTEGER NOT NULL,
+  lifetime_value         REAL NOT NULL,
+  segment                TEXT NOT NULL,
+  FOREIGN KEY (lead_id)                REFERENCES leads(lead_id),
+  FOREIGN KEY (acquisition_channel_id) REFERENCES channels(channel_id)
+);
+CREATE TABLE ad_spend (
+  spend_id    INTEGER PRIMARY KEY,
+  campaign_id INTEGER NOT NULL,
+  spend_date  DATE NOT NULL,
+  amount      REAL NOT NULL,
+  impressions INTEGER NOT NULL,
+  clicks      INTEGER NOT NULL,
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(campaign_id)
+);
+CREATE TABLE conversions (
+  conversion_id   INTEGER PRIMARY KEY,
+  customer_id     INTEGER NOT NULL,
+  campaign_id     INTEGER NOT NULL,
+  conversion_date DATE NOT NULL,
+  conversion_type TEXT NOT NULL,
+  revenue         REAL NOT NULL,
+  FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(campaign_id)
+);
+CREATE TABLE email_sends (
+  send_id       INTEGER PRIMARY KEY,
+  campaign_id   INTEGER NOT NULL,
+  send_date     DATE NOT NULL,
+  sent_count    INTEGER NOT NULL,
+  opens         INTEGER NOT NULL,
+  clicks        INTEGER NOT NULL,
+  unsubscribes  INTEGER NOT NULL,
+  FOREIGN KEY (campaign_id) REFERENCES campaigns(campaign_id)
+);
+`;
+
+const REF_MARKETING = {
+  channels: [
+    [1, 'Google Ads', 'Paid Search'],
+    [2, 'Facebook Ads', 'Paid Social'],
+    [3, 'LinkedIn Ads', 'Paid Social'],
+    [4, 'Organic Search', 'Organic'],
+    [5, 'Email', 'Email'],
+    [6, 'Referral', 'Referral'],
+  ],
+  campaignNames: ['Spring Launch','Q1 Brand Awareness','Enterprise Outbound','Free Trial Push','Industry Webinar','Holiday Promo','Product Update','Lead Magnet','Reactivation','Net New Q3','Summit Sponsorship','Mid-Market Push','Onboarding Series','Renewal Drive','Partner Collab'],
+  campaignStatuses: ['Active','Active','Active','Active','Paused','Completed','Completed'],
+  leadStatuses: ['New','Qualified','Converted','Lost','Nurturing'],
+  conversionTypes: ['Trial Signup','Demo Request','Paid Conversion','Upsell','Renewal'],
+  segments: ['SMB','Mid-Market','Enterprise'],
+};
+
+function generateMarketingData() {
+  const data = { channels: [], campaigns: [], leads: [], customers: [], ad_spend: [], conversions: [], email_sends: [] };
+  for (const c of REF_MARKETING.channels) data.channels.push(c);
+
+  // 15 campaigns
+  for (let cid = 1; cid <= 15; cid++) {
+    const channel_id = randInt(1, 6);
+    const startDay = randInt(0, 500);
+    const lifespan = randInt(30, 180);
+    const start = dateAdd('2025-01-01', startDay);
+    const end = dateAdd('2025-01-01', startDay + lifespan);
+    const budget = randInt(5000, 80000);
+    const status = pick(REF_MARKETING.campaignStatuses);
+    data.campaigns.push([cid, REF_MARKETING.campaignNames[cid - 1], channel_id, start, end, budget, status]);
+  }
+
+  // 150 leads
+  for (let lid = 1; lid <= 150; lid++) {
+    const ch = randInt(1, 6);
+    const camp = rand() < 0.85 ? randInt(1, 15) : null;
+    const created = dateAdd('2025-01-01', randInt(0, 500));
+    const status = pickWeighted([['New', 25], ['Qualified', 30], ['Converted', 20], ['Lost', 15], ['Nurturing', 10]]);
+    const score = randInt(10, 100);
+    data.leads.push([lid, ch, camp, created, status, score]);
+  }
+
+  // customers — derived from converted leads
+  const convertedLeads = data.leads.filter(l => l[4] === 'Converted');
+  let custId = 1;
+  for (const lead of convertedLeads) {
+    const convDate = dateAdd(lead[3], randInt(7, 90));
+    const seg = pickWeighted([['SMB', 50], ['Mid-Market', 35], ['Enterprise', 15]]);
+    const ltv = seg === 'Enterprise' ? randInt(50000, 250000) : seg === 'Mid-Market' ? randInt(8000, 50000) : randInt(500, 8000);
+    data.customers.push([custId++, lead[0], convDate, lead[1], ltv, seg]);
+  }
+
+  // ad spend — daily records for paid campaigns
+  let sid = 1;
+  for (const camp of data.campaigns) {
+    const channel = data.channels.find(c => c[0] === camp[2]);
+    if (!channel[2].startsWith('Paid')) continue;
+    const startDate = camp[3];
+    const days = Math.min(60, Math.floor((new Date(camp[4]) - new Date(camp[3])) / (24 * 3600 * 1000)));
+    for (let d = 0; d < days; d += 2) {
+      const dailyBudget = camp[5] / days * 2;
+      const variance = 0.7 + rand() * 0.6;
+      const amount = +(dailyBudget * variance).toFixed(2);
+      const impressions = Math.floor(amount * randInt(50, 200));
+      const clicks = Math.floor(impressions * (0.005 + rand() * 0.03));
+      data.ad_spend.push([sid++, camp[0], dateAdd(startDate, d), amount, impressions, clicks]);
+    }
+  }
+
+  // conversions
+  let convId = 1;
+  for (const cust of data.customers) {
+    const campCount = pickWeighted([[1, 60], [2, 30], [3, 10]]);
+    for (let k = 0; k < campCount; k++) {
+      const camp = randInt(1, 15);
+      const conv_type = pick(REF_MARKETING.conversionTypes);
+      const revenue = conv_type === 'Paid Conversion' ? cust[4] * 0.3 : conv_type === 'Upsell' ? cust[4] * 0.4 : conv_type === 'Renewal' ? cust[4] * 0.8 : 0;
+      const conv_date = dateAdd(cust[2], k * randInt(30, 90));
+      data.conversions.push([convId++, cust[0], camp, conv_date, conv_type, +revenue.toFixed(2)]);
+    }
+  }
+
+  // email sends — for email channel campaigns
+  let eid = 1;
+  for (const camp of data.campaigns) {
+    if (camp[2] !== 5) continue; // only email channel
+    const sendCount = randInt(3, 8);
+    const startDate = camp[3];
+    for (let k = 0; k < sendCount; k++) {
+      const sentCount = randInt(2000, 30000);
+      const openRate = 0.15 + rand() * 0.25;
+      const opens = Math.floor(sentCount * openRate);
+      const clickRate = 0.02 + rand() * 0.08;
+      const clicks = Math.floor(opens * clickRate);
+      const unsubs = Math.floor(sentCount * (0.001 + rand() * 0.005));
+      data.email_sends.push([eid++, camp[0], dateAdd(startDate, k * 7), sentCount, opens, clicks, unsubs]);
+    }
+  }
+
+  return data;
+}
+
+/* ============================================================
+   TABLE METADATA — descriptions used in Schema tab + sidebar
+   ============================================================ */
+const TABLE_META_CLINICAL = {
+  departments: { desc: 'Clinical departments. Each department has providers, appointments, and encounters tied to it.', cols: [
+    { name: 'department_id', type: 'INT PK', pk: true },
+    { name: 'department_name', type: 'TEXT' },
+    { name: 'location', type: 'TEXT' },
+  ]},
+  insurance: { desc: 'Payer reference table. Joins to patients.', cols: [
+    { name: 'insurance_id', type: 'INT PK', pk: true },
+    { name: 'payer_name', type: 'TEXT' },
+    { name: 'plan_type', type: 'TEXT' },
+  ]},
+  providers: { desc: 'Physicians and clinicians. Each belongs to one department.', cols: [
+    { name: 'provider_id', type: 'INT PK', pk: true },
+    { name: 'first_name', type: 'TEXT' },
+    { name: 'last_name', type: 'TEXT' },
+    { name: 'specialty', type: 'TEXT' },
+    { name: 'department_id', type: 'INT FK', fk: true },
+    { name: 'hire_date', type: 'DATE' },
+  ]},
+  patients: { desc: 'Patient demographics. DOB is useful for age calculation.', cols: [
+    { name: 'patient_id', type: 'INT PK', pk: true },
+    { name: 'first_name', type: 'TEXT' },
+    { name: 'last_name', type: 'TEXT' },
+    { name: 'dob', type: 'DATE' },
+    { name: 'gender', type: 'TEXT' },
+    { name: 'zip_code', type: 'TEXT' },
+    { name: 'insurance_id', type: 'INT FK', fk: true },
+  ]},
+  appointments: { desc: 'Scheduled visits. Status is one of Completed, No-Show, Cancelled. Wait time is null when not completed.', cols: [
+    { name: 'appointment_id', type: 'INT PK', pk: true },
+    { name: 'patient_id', type: 'INT FK', fk: true },
+    { name: 'provider_id', type: 'INT FK', fk: true },
+    { name: 'department_id', type: 'INT FK', fk: true },
+    { name: 'scheduled_datetime', type: 'DATETIME' },
+    { name: 'appointment_type', type: 'TEXT' },
+    { name: 'status', type: 'TEXT' },
+    { name: 'wait_time_minutes', type: 'INT' },
+  ]},
+  encounters: { desc: 'Clinical encounters: Outpatient, ER, or Inpatient. Length of stay is 0 for same-day outpatient.', cols: [
+    { name: 'encounter_id', type: 'INT PK', pk: true },
+    { name: 'patient_id', type: 'INT FK', fk: true },
+    { name: 'provider_id', type: 'INT FK', fk: true },
+    { name: 'department_id', type: 'INT FK', fk: true },
+    { name: 'admission_date', type: 'DATE' },
+    { name: 'discharge_date', type: 'DATE' },
+    { name: 'encounter_type', type: 'TEXT' },
+    { name: 'length_of_stay', type: 'INT' },
+  ]},
+  diagnoses: { desc: 'ICD-10 diagnoses attached to encounters. is_primary flags the principal diagnosis.', cols: [
+    { name: 'diagnosis_id', type: 'INT PK', pk: true },
+    { name: 'encounter_id', type: 'INT FK', fk: true },
+    { name: 'icd_code', type: 'TEXT' },
+    { name: 'diagnosis_description', type: 'TEXT' },
+    { name: 'is_primary', type: 'INT (0/1)' },
+  ]},
+  procedures: { desc: 'CPT-coded procedures with cost.', cols: [
+    { name: 'procedure_id', type: 'INT PK', pk: true },
+    { name: 'encounter_id', type: 'INT FK', fk: true },
+    { name: 'cpt_code', type: 'TEXT' },
+    { name: 'procedure_description', type: 'TEXT' },
+    { name: 'procedure_date', type: 'DATE' },
+    { name: 'cost', type: 'REAL' },
+  ]},
+};
+
+const TABLE_META_FINANCIAL = {
+  departments: { desc: 'Cost centers. Each has expenses tied to it.', cols: [
+    { name: 'department_id', type: 'INT PK', pk: true },
+    { name: 'department_name', type: 'TEXT' },
+    { name: 'cost_center', type: 'TEXT' },
+    { name: 'region', type: 'TEXT' },
+  ]},
+  customers: { desc: 'B2B customers. Drive invoices, orders, and revenue.', cols: [
+    { name: 'customer_id', type: 'INT PK', pk: true },
+    { name: 'company_name', type: 'TEXT' },
+    { name: 'industry', type: 'TEXT' },
+    { name: 'region', type: 'TEXT' },
+    { name: 'segment', type: 'TEXT' },
+    { name: 'signup_date', type: 'DATE' },
+    { name: 'annual_revenue', type: 'REAL' },
+  ]},
+  products: { desc: 'Product catalog with price and cost (used for margin calculations).', cols: [
+    { name: 'product_id', type: 'INT PK', pk: true },
+    { name: 'product_name', type: 'TEXT' },
+    { name: 'category', type: 'TEXT' },
+    { name: 'unit_price', type: 'REAL' },
+    { name: 'unit_cost', type: 'REAL' },
+  ]},
+  orders: { desc: 'Line-item orders. total_amount reflects negotiated price after discount/markup.', cols: [
+    { name: 'order_id', type: 'INT PK', pk: true },
+    { name: 'customer_id', type: 'INT FK', fk: true },
+    { name: 'product_id', type: 'INT FK', fk: true },
+    { name: 'order_date', type: 'DATE' },
+    { name: 'quantity', type: 'INT' },
+    { name: 'total_amount', type: 'REAL' },
+  ]},
+  invoices: { desc: 'Invoices issued. Status: Paid, Pending, Overdue.', cols: [
+    { name: 'invoice_id', type: 'INT PK', pk: true },
+    { name: 'customer_id', type: 'INT FK', fk: true },
+    { name: 'invoice_date', type: 'DATE' },
+    { name: 'due_date', type: 'DATE' },
+    { name: 'amount', type: 'REAL' },
+    { name: 'status', type: 'TEXT' },
+  ]},
+  payments: { desc: 'Payments received against invoices. One payment per paid invoice.', cols: [
+    { name: 'payment_id', type: 'INT PK', pk: true },
+    { name: 'invoice_id', type: 'INT FK', fk: true },
+    { name: 'payment_date', type: 'DATE' },
+    { name: 'amount', type: 'REAL' },
+    { name: 'payment_method', type: 'TEXT' },
+  ]},
+  expenses: { desc: 'Operating expenses by department and category.', cols: [
+    { name: 'expense_id', type: 'INT PK', pk: true },
+    { name: 'department_id', type: 'INT FK', fk: true },
+    { name: 'expense_category', type: 'TEXT' },
+    { name: 'expense_date', type: 'DATE' },
+    { name: 'amount', type: 'REAL' },
+    { name: 'vendor', type: 'TEXT' },
+  ]},
+};
+
+const TABLE_META_MARKETING = {
+  channels: { desc: 'Marketing channels (Paid Search, Paid Social, Organic, Email, Referral).', cols: [
+    { name: 'channel_id', type: 'INT PK', pk: true },
+    { name: 'channel_name', type: 'TEXT' },
+    { name: 'channel_type', type: 'TEXT' },
+  ]},
+  campaigns: { desc: 'Marketing campaigns with budget and timeline.', cols: [
+    { name: 'campaign_id', type: 'INT PK', pk: true },
+    { name: 'campaign_name', type: 'TEXT' },
+    { name: 'channel_id', type: 'INT FK', fk: true },
+    { name: 'start_date', type: 'DATE' },
+    { name: 'end_date', type: 'DATE' },
+    { name: 'budget', type: 'REAL' },
+    { name: 'status', type: 'TEXT' },
+  ]},
+  leads: { desc: 'Prospective customers. Status: New, Qualified, Converted, Lost, Nurturing.', cols: [
+    { name: 'lead_id', type: 'INT PK', pk: true },
+    { name: 'source_channel_id', type: 'INT FK', fk: true },
+    { name: 'campaign_id', type: 'INT FK', fk: true },
+    { name: 'created_date', type: 'DATE' },
+    { name: 'status', type: 'TEXT' },
+    { name: 'lead_score', type: 'INT' },
+  ]},
+  customers: { desc: 'Converted leads. lifetime_value is total revenue attributed to the customer.', cols: [
+    { name: 'customer_id', type: 'INT PK', pk: true },
+    { name: 'lead_id', type: 'INT FK', fk: true },
+    { name: 'conversion_date', type: 'DATE' },
+    { name: 'acquisition_channel_id', type: 'INT FK', fk: true },
+    { name: 'lifetime_value', type: 'REAL' },
+    { name: 'segment', type: 'TEXT' },
+  ]},
+  ad_spend: { desc: 'Daily ad spend records for paid campaigns with impressions and clicks.', cols: [
+    { name: 'spend_id', type: 'INT PK', pk: true },
+    { name: 'campaign_id', type: 'INT FK', fk: true },
+    { name: 'spend_date', type: 'DATE' },
+    { name: 'amount', type: 'REAL' },
+    { name: 'impressions', type: 'INT' },
+    { name: 'clicks', type: 'INT' },
+  ]},
+  conversions: { desc: 'Conversion events. Types include Trial Signup, Demo Request, Paid Conversion, Upsell, Renewal.', cols: [
+    { name: 'conversion_id', type: 'INT PK', pk: true },
+    { name: 'customer_id', type: 'INT FK', fk: true },
+    { name: 'campaign_id', type: 'INT FK', fk: true },
+    { name: 'conversion_date', type: 'DATE' },
+    { name: 'conversion_type', type: 'TEXT' },
+    { name: 'revenue', type: 'REAL' },
+  ]},
+  email_sends: { desc: 'Email campaign performance: sent, opens, clicks, unsubscribes.', cols: [
+    { name: 'send_id', type: 'INT PK', pk: true },
+    { name: 'campaign_id', type: 'INT FK', fk: true },
+    { name: 'send_date', type: 'DATE' },
+    { name: 'sent_count', type: 'INT' },
+    { name: 'opens', type: 'INT' },
+    { name: 'clicks', type: 'INT' },
+    { name: 'unsubscribes', type: 'INT' },
+  ]},
+};
+
+/* ============================================================
+   MODULE REGISTRY
+   ============================================================ */
+const MODULES = {
+  clinical_ops: {
+    name: 'Clinical Operations',
+    description: 'Patient flow, scheduling, encounters, diagnoses, and procedures in a mid-sized health system.',
+    schemaSQL: SCHEMA_CLINICAL,
+    tableMeta: TABLE_META_CLINICAL,
+    tableOrder: ['departments','insurance','providers','patients','appointments','encounters','diagnoses','procedures'],
+    defaultOpenTables: [],
+    generateData: generateClinicalData,
+    get problems() { return typeof PROBLEMS_CLINICAL !== 'undefined' ? PROBLEMS_CLINICAL : []; },
+    defaultQuery: '',
+  },
+  financial: {
+    name: 'Financial Analysis',
+    description: 'B2B revenue, invoicing, payments, expenses, and product profitability for a SaaS company.',
+    schemaSQL: SCHEMA_FINANCIAL,
+    tableMeta: TABLE_META_FINANCIAL,
+    tableOrder: ['departments','customers','products','orders','invoices','payments','expenses'],
+    defaultOpenTables: [],
+    generateData: generateFinancialData,
+    get problems() { return typeof PROBLEMS_FINANCIAL !== 'undefined' ? PROBLEMS_FINANCIAL : []; },
+    defaultQuery: '',
+  },
+  marketing: {
+    name: 'Marketing Analytics',
+    description: 'Multi-channel marketing: campaigns, leads, conversions, ad spend, and email performance.',
+    schemaSQL: SCHEMA_MARKETING,
+    tableMeta: TABLE_META_MARKETING,
+    tableOrder: ['channels','campaigns','leads','customers','ad_spend','conversions','email_sends'],
+    defaultOpenTables: [],
+    generateData: generateMarketingData,
+    get problems() { return typeof PROBLEMS_MARKETING !== 'undefined' ? PROBLEMS_MARKETING : []; },
+    defaultQuery: '',
+  },
+};
+
+let currentModuleKey = 'clinical_ops';
+function currentModule() { return MODULES[currentModuleKey]; }
+
+/* ============================================================
+   LOCAL STORAGE PERSISTENCE
+   ============================================================ */
+const STORAGE_KEY = 'sql_practice_state_v1';
+let currentTheme = 'dark';
+
+function applyTheme(theme) {
+  currentTheme = theme;
+  if (theme === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+  const btn = document.getElementById('btn-theme');
+  if (btn) btn.textContent = theme === 'light' ? '☾' : '☀';
+}
+
+function toggleTheme() {
+  applyTheme(currentTheme === 'light' ? 'dark' : 'light');
+  saveState();
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      problemStatus,
+      currentModuleKey,
+      theme: currentTheme,
+    }));
+  } catch (e) { /* private mode / quota — silently ignore */ }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (s.problemStatus && typeof s.problemStatus === 'object') {
+      for (const k of Object.keys(s.problemStatus)) {
+        if (MODULES[k]) problemStatus[k] = s.problemStatus[k];
+      }
+    }
+    if (s.currentModuleKey && MODULES[s.currentModuleKey]) {
+      currentModuleKey = s.currentModuleKey;
+    }
+    if (s.theme === 'light' || s.theme === 'dark') {
+      currentTheme = s.theme;
+    }
+  } catch (e) { /* corrupted state — silently ignore */ }
+}
+
+function resetProgress() {
+  if (!confirm('Reset progress across ALL roles? This clears every checkmark and cannot be undone.')) return;
+  for (const k of Object.keys(problemStatus)) delete problemStatus[k];
+  saveState();
+  renderPracticeProblems();
+  renderProblemLoader();
+}
+
+/* ============================================================
+   PROBLEM STATUS TRACKING (per module, persisted)
+   ============================================================ */
+const problemStatus = {};
+
+function getProblemStatus(moduleKey, num) {
+  return (problemStatus[moduleKey] || {})[num] || null;
+}
+
+function setProblemStatus(num, status) {
+  if (!problemStatus[currentModuleKey]) problemStatus[currentModuleKey] = {};
+  const current = problemStatus[currentModuleKey][num];
+  if (current === 'completed' && status !== 'completed') return;
+  problemStatus[currentModuleKey][num] = status;
+  saveState();
+  const card = document.querySelector(`.problem[data-num="${num}"]`);
+  if (card) {
+    const statusEl = card.querySelector('.prob-status');
+    if (statusEl) {
+      statusEl.className = 'prob-status ' + status;
+      statusEl.textContent = '\u2713';
+    }
+  }
+  renderProblemLoader();
+}
+
+function loadProblem(p) {
+  const editorContent = `-- Problem ${p.num}: ${p.title}\n-- ${p.desc.replace(/\n/g, '\n-- ')}\n\n`;
+  if (cmEditor) {
+    cmEditor.setValue(editorContent);
+    cmEditor.focus();
+    cmEditor.setCursor(cmEditor.lineCount(), 0);
+  }
+  setCurrentProblem(p);
+  const queryTab = document.querySelector('.tab[data-tab="query"]');
+  if (queryTab) queryTab.click();
+}
+
+function renderProblemLoader() {
+  const select = document.getElementById('problem-loader');
+  if (!select) return;
+  const problems = currentModule().problems || [];
+  const groups = { beginner: [], intermediate: [], advanced: [] };
+  for (const p of problems) groups[p.diff].push(p);
+
+  const escape = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const fmt = (p) => {
+    const s = getProblemStatus(currentModuleKey, p.num);
+    const prefix = s === 'completed' ? '\u2705 ' : s === 'attempted' ? '\ud83d\udfe1 ' : '';
+    return `<option value="${p.num}">${prefix}#${String(p.num).padStart(2,'0')}  ${escape(p.title)}</option>`;
+  };
+
+  select.innerHTML =
+    '<option value="">Load problem\u2026</option>' +
+    `<optgroup label="Beginner">${groups.beginner.map(fmt).join('')}</optgroup>` +
+    `<optgroup label="Intermediate">${groups.intermediate.map(fmt).join('')}</optgroup>` +
+    `<optgroup label="Advanced">${groups.advanced.map(fmt).join('')}</optgroup>`;
+  select.value = '';
+}
+
+/* ============================================================
+   DATABASE BUILD / INIT / SWITCH / REFRESH
+   ============================================================ */
+let db = null;
+let SQL = null;
+
+function setLoadingText(text) {
+  const el = document.getElementById('loading-text');
+  if (el) el.innerHTML = text;
+}
+
+function describeCounts(counts) {
+  return Object.entries(counts).slice(0, 5).map(([k, v]) => `${v} ${k}`).join(' · ');
+}
+
+function buildDatabase(seedValue) {
+  _seed = seedValue;
+  if (db) db.close();
+  db = new SQL.Database();
+  const mod = currentModule();
+  db.run(mod.schemaSQL);
+  const data = mod.generateData();
+  db.run('BEGIN TRANSACTION');
+  for (const t of mod.tableOrder) {
+    const rows = data[t];
+    if (!rows || !rows.length) continue;
+    const placeholders = '(' + rows[0].map(() => '?').join(',') + ')';
+    const sql = `INSERT INTO ${t} VALUES ${placeholders}`;
+    for (const r of rows) db.run(sql, r);
+  }
+  db.run('COMMIT');
+  return computeCounts();
+}
+
+function computeCounts() {
+  const counts = {};
+  for (const t of currentModule().tableOrder) {
+    const res = db.exec(`SELECT COUNT(*) FROM ${t}`);
+    counts[t] = res[0].values[0][0];
+  }
+  return counts;
+}
+
+async function initDatabase() {
+  const loadingEl = document.getElementById('loading');
+  try {
+    setLoadingText('Loading SQL engine (WebAssembly)…');
+    SQL = await initSqlJs({
+      locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`
+    });
+
+    loadState();
+    applyTheme(currentTheme);
+
+    setLoadingText('Building schema and seeding data…');
+    const counts = buildDatabase(20250604);
+
+    const m = currentModule();
+    document.getElementById('module-description').textContent = m.description;
+    document.getElementById('mast-title').innerHTML = `${m.name} <em>—</em> SQL Practice`;
+    document.title = `${m.name} — SQL Practice`;
+    setLoadingText(`${m.name} ready · ${describeCounts(counts)}`);
+    loadingEl.classList.add('ready');
+
+    renderSchemaCards(counts);
+    setupEditor();
+    renderPracticeProblems();
+  } catch (err) {
+    setLoadingText('Error loading database: ' + err.message);
+    console.error(err);
+  }
+}
+
+function resetDatabase() {
+  const counts = buildDatabase(20250604);
+  renderSchemaCards(counts);
+}
+
+function switchModule(newKey) {
+  if (newKey === currentModuleKey) return;
+  currentModuleKey = newKey;
+  saveState();
+  const counts = buildDatabase(20250604);
+  const m = currentModule();
+  document.getElementById('module-description').textContent = m.description;
+  document.getElementById('mast-title').innerHTML = `${m.name} <em>—</em> SQL Practice`;
+  document.title = `${m.name} — SQL Practice`;
+  setLoadingText(`${m.name} loaded · ${describeCounts(counts)}`);
+  renderSchemaCards(counts);
+  renderPracticeProblems();
+  renderProblemLoader();
+  setCurrentProblem(null);
+  if (cmEditor) {
+    cmEditor.setValue(m.defaultQuery || '');
+    cmEditor.focus();
+  }
+  document.getElementById('results-meta').textContent = '—';
+  document.getElementById('results-body').innerHTML = '<div class="results-empty">Write a query and hit Run.</div>';
+}
+
+function refreshData() {
+  const newSeed = Math.floor(Math.random() * 1000000);
+  const counts = buildDatabase(newSeed);
+  const m = currentModule();
+  setLoadingText(`${m.name} ready · ${describeCounts(counts)} · seed ${newSeed}`);
+  renderSchemaCards(counts);
+  document.getElementById('results-meta').textContent = 'Data refreshed.';
+  document.getElementById('results-body').innerHTML = '<div class="ok-msg">Database regenerated with new random data. Re-run your query to see the new values.</div>';
+}
+
+function renderSchemaCards(counts) {
+  const grid = document.getElementById('schema-grid');
+  grid.innerHTML = '';
+  const mod = currentModule();
+  const order = mod.tableOrder;
+  for (const t of order) {
+    const meta = mod.tableMeta[t];
+    const card = document.createElement('div');
+    card.className = 'table-card';
+    card.innerHTML = `
+      <div class="tc-head">
+        <span class="tc-name">${t}</span>
+        <span class="tc-count">${counts[t].toLocaleString()} rows</span>
+      </div>
+      <div class="tc-desc">${meta.desc}</div>
+      <div class="tc-cols">
+        ${meta.cols.map(c => `
+          <div class="tc-col">
+            <span class="col-name ${c.pk ? 'pk' : ''} ${c.fk ? 'fk' : ''}">${c.name}</span>
+            <span class="col-type">${c.type}</span>
+          </div>`).join('')}
+      </div>
+      <div class="tc-foot">
+        <button class="tc-peek" data-table="${t}">view sample rows ↓</button>
+      </div>
+      <div class="tc-sample" id="sample-${t}"></div>
+    `;
+    grid.appendChild(card);
+  }
+  if (!grid.dataset.handlerAttached) {
+    grid.dataset.handlerAttached = 'true';
+    grid.addEventListener('click', e => {
+    const btn = e.target.closest('.tc-peek');
+    if (!btn) return;
+    const t = btn.dataset.table;
+    const container = document.getElementById('sample-' + t);
+    if (container.classList.contains('open')) {
+      container.classList.remove('open');
+      btn.textContent = 'view sample rows ↓';
+    } else {
+      const res = db.exec(`SELECT * FROM ${t} LIMIT 8`);
+      container.innerHTML = renderResultTable(res[0]);
+      container.classList.add('open');
+      btn.textContent = 'hide sample rows ↑';
+    }
+    });
+  }
+
+  // Also render the compact sidebar reference shown alongside the query editor
+  renderSidebarSchema(counts);
+}
+
+function renderSidebarSchema(counts) {
+  const container = document.getElementById('sidebar-tables');
+  if (!container) return;
+  const mod = currentModule();
+  const order = mod.tableOrder;
+  const defaultOpen = new Set(mod.defaultOpenTables || []);
+
+  // Pre-fetch 3 sample rows for each table
+  const samples = {};
+  for (const t of order) {
+    try {
+      const res = db.exec(`SELECT * FROM ${t} LIMIT 3`);
+      samples[t] = res[0] || null;
+    } catch (e) {
+      samples[t] = null;
+    }
+  }
+
+  container.innerHTML = order.map(t => {
+    const meta = mod.tableMeta[t];
+    const isOpen = defaultOpen.has(t);
+    return `
+      <div class="sidebar-table ${isOpen ? 'open' : ''}" data-table="${t}">
+        <div class="sidebar-table-head">
+          <div class="sidebar-table-head-left">
+            <span class="sidebar-chev">▸</span>
+            <span class="sidebar-table-name">${t}</span>
+          </div>
+          <span class="sidebar-table-count">${counts[t]} rows</span>
+        </div>
+        <div class="sidebar-table-cols">
+          ${meta.cols.map(c => {
+            const cleanType = c.type.replace(' PK', '').replace(' FK', '').replace(' (0/1)', '');
+            return `
+              <div class="sidebar-col">
+                <span class="sc-name ${c.pk ? 'pk' : ''} ${c.fk ? 'fk' : ''}">${c.name}</span>
+                <span class="sc-type">${cleanType}</span>
+              </div>`;
+          }).join('')}
+          <div class="sidebar-sample-label">Sample rows</div>
+          <div class="sidebar-sample">${renderSidebarSample(samples[t])}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (!container.dataset.handlerAttached) {
+    container.dataset.handlerAttached = 'true';
+    container.addEventListener('click', e => {
+      const head = e.target.closest('.sidebar-table-head');
+      if (!head) return;
+      head.parentElement.classList.toggle('open');
+    });
+  }
+
+  // Expand-all / collapse-all toggle
+  const toggleBtn = document.getElementById('sidebar-toggle-all');
+  toggleBtn.addEventListener('click', () => {
+    const tables = container.querySelectorAll('.sidebar-table');
+    const anyClosed = Array.from(tables).some(t => !t.classList.contains('open'));
+    tables.forEach(t => t.classList.toggle('open', anyClosed));
+    toggleBtn.textContent = anyClosed ? 'collapse all' : 'expand all';
+  });
+
+  // "View full schema" link jumps to Schema tab
+  document.getElementById('sidebar-to-full').addEventListener('click', () => {
+    document.querySelector('.tab[data-tab="schema"]').click();
+  });
+}
+
+function renderSidebarSample(r) {
+  if (!r || !r.values || !r.values.length) {
+    return '<div style="font-family:JetBrains Mono,monospace;font-size:10px;color:var(--ink-3);padding:4px 0;">No rows.</div>';
+  }
+  let html = '<table class="sidebar-sample-table"><thead><tr>';
+  for (const c of r.columns) html += `<th>${escapeHtml(String(c))}</th>`;
+  html += '</tr></thead><tbody>';
+  for (const row of r.values) {
+    html += '<tr>';
+    for (const cell of row) {
+      if (cell === null || cell === undefined) {
+        html += '<td class="null-cell">NULL</td>';
+      } else {
+        const str = String(cell);
+        const truncated = str.length > 22 ? str.slice(0, 20) + '…' : str;
+        html += `<td title="${escapeHtml(str)}">${escapeHtml(truncated)}</td>`;
+      }
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  return html;
+}
+
+/* ============================================================
+   QUERY EDITOR
+   ============================================================ */
+let cmEditor = null;
+let currentProblem = null;
+
+function setCurrentProblem(p) {
+  currentProblem = p;
+  const indicator = document.getElementById('problem-indicator');
+  const checkBtn = document.getElementById('btn-check');
+  if (p) {
+    indicator.hidden = false;
+    checkBtn.hidden = false;
+    document.getElementById('pi-num').textContent = '#' + String(p.num).padStart(2, '0');
+    document.getElementById('pi-title').textContent = p.title;
+  } else {
+    indicator.hidden = true;
+    checkBtn.hidden = true;
+  }
+}
+
+function compareResults(userExec, solutionExec) {
+  if (!userExec || !userExec.length) {
+    return {
+      ok: false, level: 'fail',
+      title: 'No result returned',
+      detail: 'Your query ran but didn\u2019t return a result set. Make sure your last statement is a SELECT.'
+    };
+  }
+  const user = userExec[userExec.length - 1];
+  const sol  = solutionExec[solutionExec.length - 1];
+
+  const userRows = user.values.length;
+  const solRows  = sol.values.length;
+  const userCols = user.columns.length;
+  const solCols  = sol.columns.length;
+
+  if (userRows !== solRows) {
+    return {
+      ok: false, level: 'fail',
+      title: 'Row count is off',
+      detail: `Expected ${solRows} row${solRows === 1 ? '' : 's'}, you returned ${userRows}. Re-check your WHERE filters, JOINs, and GROUP BY.`
+    };
+  }
+
+  if (userCols !== solCols) {
+    return {
+      ok: false, level: 'partial',
+      title: 'Column count is off',
+      detail: `Row count matches, but expected ${solCols} columns and you returned ${userCols}. Check what you put in the SELECT list.`
+    };
+  }
+
+  const norm = v => v === null || v === undefined ? '\u2205' : String(v);
+  const sortRows = rows => rows.map(r => r.map(norm)).sort((a, b) => {
+    for (let i = 0; i < a.length; i++) {
+      const cmp = a[i].localeCompare(b[i]);
+      if (cmp !== 0) return cmp;
+    }
+    return 0;
+  });
+
+  const u = sortRows(user.values);
+  const s = sortRows(sol.values);
+
+  let mismatches = 0;
+  let firstMismatch = null;
+  for (let i = 0; i < u.length; i++) {
+    for (let j = 0; j < u[i].length; j++) {
+      const uVal = u[i][j], sVal = s[i][j];
+      // numeric tolerance — handles ROUND() and float precision drift
+      const uNum = parseFloat(uVal), sNum = parseFloat(sVal);
+      if (!isNaN(uNum) && !isNaN(sNum) && uVal !== '\u2205' && sVal !== '\u2205'
+          && Math.abs(uNum - sNum) < 0.05) continue;
+      if (uVal !== sVal) {
+        mismatches++;
+        if (!firstMismatch) firstMismatch = { row: i + 1, col: j + 1, expected: sVal, got: uVal };
+      }
+    }
+  }
+
+  if (mismatches === 0) {
+    return {
+      ok: true, level: 'pass',
+      title: 'Correct',
+      detail: `${userRows} row${userRows === 1 ? '' : 's'} \u00d7 ${userCols} column${userCols === 1 ? '' : 's'} match the expected output.`
+    };
+  }
+
+  return {
+    ok: false, level: 'partial',
+    title: `${mismatches} value${mismatches === 1 ? '' : 's'} differ`,
+    detail: `Row and column counts match, but ${mismatches} value${mismatches === 1 ? ' is' : 's are'} off. First difference (after sorting): expected "${firstMismatch.expected}", got "${firstMismatch.got}". This often means a wrong filter, an off-by-one date, or the wrong aggregate.`
+  };
+}
+
+function checkAnswer() {
+  if (!currentProblem || !db) return;
+  const userSql = cmEditor.getValue().trim();
+  if (!userSql || userSql.split('\n').every(l => l.trim().startsWith('--') || l.trim() === '')) {
+    showCheckResult({
+      ok: false, level: 'fail',
+      title: 'No query to check',
+      detail: 'Write a SELECT statement below the comments, then click Check Answer.'
+    }, null);
+    return;
+  }
+
+  let userExec, solutionExec;
+  try {
+    userExec = db.exec(userSql);
+  } catch (err) {
+    showCheckResult({
+      ok: false, level: 'fail',
+      title: 'Your query errored',
+      detail: err.message
+    }, null);
+    return;
+  }
+  try {
+    solutionExec = db.exec(currentProblem.sql);
+  } catch (err) {
+    showCheckResult({
+      ok: false, level: 'fail',
+      title: 'Solution failed to run (this is a bug \u2014 please report)',
+      detail: err.message
+    }, null);
+    return;
+  }
+
+  const result = compareResults(userExec, solutionExec);
+  if (currentProblem) {
+    setProblemStatus(currentProblem.num, result.level === 'pass' ? 'completed' : 'attempted');
+  }
+  showCheckResult(result, userExec);
+}
+
+function showCheckResult(r, userExec) {
+  const body = document.getElementById('results-body');
+  const meta = document.getElementById('results-meta');
+  meta.textContent = `Checked \u2014 ${r.level}`;
+
+  const klass = r.level === 'pass' ? 'check-pass' : r.level === 'partial' ? 'check-partial' : 'check-fail';
+  const icon = r.level === 'pass' ? '\u2713' : r.level === 'partial' ? '~' : '\u2717';
+
+  let html = `
+    <div class="check-result ${klass}">
+      <div class="cr-head">
+        <span class="cr-icon">${icon}</span>
+        <span class="cr-title">${escapeHtml(r.title)}</span>
+      </div>
+      <div class="cr-detail">${escapeHtml(r.detail)}</div>
+    </div>`;
+
+  if (userExec && userExec.length) {
+    const last = userExec[userExec.length - 1];
+    html += `<div class="cr-section-label">Your result \u2014 ${last.values.length} row${last.values.length === 1 ? '' : 's'}</div>`;
+    html += renderResultTable(last);
+  }
+
+  body.innerHTML = html;
+}
+
+function setupEditor() {
+  cmEditor = CodeMirror.fromTextArea(document.getElementById('editor'), {
+    mode: 'text/x-sql',
+    theme: 'default',
+    lineNumbers: true,
+    indentWithTabs: false,
+    smartIndent: true,
+    tabSize: 2,
+    lineWrapping: true,
+    extraKeys: {
+      'Cmd-Enter': runQuery,
+      'Ctrl-Enter': runQuery,
+      'Shift-Cmd-Enter': () => { if (currentProblem) checkAnswer(); },
+      'Shift-Ctrl-Enter': () => { if (currentProblem) checkAnswer(); },
+    },
+  });
+  cmEditor.setValue(currentModule().defaultQuery || '');
+
+  document.getElementById('btn-run').addEventListener('click', runQuery);
+  document.getElementById('btn-check').addEventListener('click', checkAnswer);
+  document.getElementById('pi-close').addEventListener('click', () => setCurrentProblem(null));
+  document.getElementById('btn-clear').addEventListener('click', () => {
+    cmEditor.setValue('');
+    cmEditor.focus();
+  });
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    resetDatabase();
+    const meta = document.getElementById('results-meta');
+    meta.textContent = 'Database reset.';
+    document.getElementById('results-body').innerHTML =
+      '<div class="ok-msg">Database has been reset to its original state.</div>';
+  });
+
+  // Module switcher
+  const moduleSelect = document.getElementById('module-select');
+  moduleSelect.value = currentModuleKey;
+  moduleSelect.addEventListener('change', e => switchModule(e.target.value));
+
+  // Refresh data button
+  document.getElementById('btn-refresh-data').addEventListener('click', refreshData);
+
+  // Problem loader dropdown
+  const problemLoader = document.getElementById('problem-loader');
+  problemLoader.addEventListener('change', e => {
+    const num = parseInt(e.target.value);
+    if (!num) return;
+    const p = currentModule().problems.find(x => x.num === num);
+    if (p) loadProblem(p);
+  });
+  renderProblemLoader();
+
+  // Reset progress button (About tab)
+  const resetBtn = document.getElementById('btn-reset-progress');
+  if (resetBtn) resetBtn.addEventListener('click', resetProgress);
+
+  // Theme toggle
+  const themeBtn = document.getElementById('btn-theme');
+  if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+}
+
+function runQuery() {
+  if (!db) return;
+  const sql = cmEditor.getValue().trim();
+  if (!sql) return;
+  const meta = document.getElementById('results-meta');
+  const body = document.getElementById('results-body');
+
+  try {
+    const t0 = performance.now();
+    const results = db.exec(sql);
+    const elapsed = (performance.now() - t0).toFixed(1);
+
+    if (!results.length) {
+      meta.textContent = `OK · ${elapsed} ms`;
+      body.innerHTML = '<div class="ok-msg">Query executed. No rows returned.</div>';
+      return;
+    }
+
+    // If multiple result sets, render each
+    if (results.length === 1) {
+      const r = results[0];
+      meta.textContent = `${r.values.length.toLocaleString()} row${r.values.length === 1 ? '' : 's'} · ${r.columns.length} column${r.columns.length === 1 ? '' : 's'} · ${elapsed} ms`;
+      body.innerHTML = renderResultTable(r);
+    } else {
+      meta.textContent = `${results.length} result sets · ${elapsed} ms`;
+      body.innerHTML = results.map((r, i) =>
+        `<div style="padding:8px 14px 4px;font-family:'JetBrains Mono',mono;font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.1em;">Result ${i+1} — ${r.values.length} rows</div>` +
+        renderResultTable(r)
+      ).join('');
+    }
+  } catch (err) {
+    meta.textContent = 'Error';
+    body.innerHTML = `<div class="err-box">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderResultTable(r) {
+  if (!r || !r.values.length) {
+    return '<div class="ok-msg">No rows.</div>';
+  }
+  let html = '<table class="results-table"><thead><tr>';
+  for (const c of r.columns) html += `<th>${escapeHtml(String(c))}</th>`;
+  html += '</tr></thead><tbody>';
+  for (const row of r.values) {
+    html += '<tr>';
+    for (const cell of row) {
+      if (cell === null || cell === undefined) {
+        html += '<td class="null-val">NULL</td>';
+      } else {
+        html += `<td>${escapeHtml(String(cell))}</td>`;
+      }
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  return html;
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/* ============================================================
+   PRACTICE PROBLEMS — 30 per role (10 per difficulty)
+   ============================================================ */
+
+const PROBLEMS_CLINICAL = [
+  // ---------- BEGINNER ----------
+  { diff: 'beginner', num: 1,
+    title: 'List every department with its location',
+    desc: 'Operations leadership wants a directory of all clinical departments and where they sit. Return department name and location, alphabetized by name.',
+    hint: 'A single SELECT … FROM … ORDER BY. No joins required.',
+    sql: `SELECT department_name, location
+FROM departments
+ORDER BY department_name;` },
+  { diff: 'beginner', num: 2,
+    title: 'Count active patients',
+    desc: 'How many patients does the health system have on file? Single number.',
+    hint: 'COUNT(*) on patients.',
+    sql: `SELECT COUNT(*) AS total_patients
+FROM patients;` },
+  { diff: 'beginner', num: 3,
+    title: 'All providers in Cardiology',
+    desc: 'List the providers (first name, last name, and specialty) whose department is Cardiology. Order by last name.',
+    hint: 'Either filter providers.department_id = 1, or join to departments and filter by name. The second is more readable and survives ID changes.',
+    sql: `SELECT p.first_name, p.last_name, p.specialty
+FROM providers p
+JOIN departments d ON p.department_id = d.department_id
+WHERE d.department_name = 'Cardiology'
+ORDER BY p.last_name;` },
+  { diff: 'beginner', num: 4,
+    title: 'Patients born in 1980 or later',
+    desc: 'Pull patient_id, full name (first + last in one column), and dob for patients born on or after Jan 1, 1980. Sort by dob ascending.',
+    hint: 'You can concatenate strings with `||` in SQLite. Filter dob with `>=`.',
+    sql: `SELECT
+  patient_id,
+  first_name || ' ' || last_name AS full_name,
+  dob
+FROM patients
+WHERE dob >= '1980-01-01'
+ORDER BY dob;` },
+  { diff: 'beginner', num: 5,
+    title: 'Ten most recent appointments',
+    desc: 'Show the ten most recently scheduled appointments. Include appointment_id, scheduled_datetime, and status.',
+    hint: 'ORDER BY scheduled_datetime DESC, then LIMIT 10.',
+    sql: `SELECT appointment_id, scheduled_datetime, status
+FROM appointments
+ORDER BY scheduled_datetime DESC
+LIMIT 10;` },
+  { diff: 'beginner', num: 6,
+    title: 'Patients with Medicare coverage',
+    desc: 'Pull patient_id, first_name, and last_name for every patient whose insurance is Medicare. Sort by last name.',
+    hint: "Join patients to insurance on insurance_id. Filter where payer_name = 'Medicare'.",
+    sql: `SELECT p.patient_id, p.first_name, p.last_name
+FROM patients p
+JOIN insurance i ON p.insurance_id = i.insurance_id
+WHERE i.payer_name = 'Medicare'
+ORDER BY p.last_name;` },
+  { diff: 'beginner', num: 7,
+    title: 'Cancelled appointments in 2025',
+    desc: 'List all appointments with status = "Cancelled" that were scheduled in 2025. Show appointment_id, scheduled_datetime, and appointment_type. Order chronologically.',
+    hint: "WHERE status = 'Cancelled' AND scheduled_datetime >= '2025-01-01' AND < '2026-01-01'.",
+    sql: `SELECT appointment_id, scheduled_datetime, appointment_type
+FROM appointments
+WHERE status = 'Cancelled'
+  AND scheduled_datetime >= '2025-01-01'
+  AND scheduled_datetime < '2026-01-01'
+ORDER BY scheduled_datetime;` },
+  { diff: 'beginner', num: 8,
+    title: 'All ER encounters',
+    desc: 'Pull encounter_id, patient_id, and admission_date for every ER encounter. Most recent first.',
+    hint: "Filter encounter_type = 'ER' on the encounters table.",
+    sql: `SELECT encounter_id, patient_id, admission_date
+FROM encounters
+WHERE encounter_type = 'ER'
+ORDER BY admission_date DESC;` },
+  { diff: 'beginner', num: 9,
+    title: 'Expensive procedures',
+    desc: 'List every procedure with a cost greater than $5,000. Show procedure_id, procedure_description, and cost. Most expensive first.',
+    hint: 'Filter cost > 5000 on procedures. ORDER BY cost DESC.',
+    sql: `SELECT procedure_id, procedure_description, cost
+FROM procedures
+WHERE cost > 5000
+ORDER BY cost DESC;` },
+  { diff: 'beginner', num: 10,
+    title: 'Distinct provider specialties',
+    desc: 'Return the unique list of specialties practiced across all providers, alphabetized.',
+    hint: 'SELECT DISTINCT, then ORDER BY.',
+    sql: `SELECT DISTINCT specialty
+FROM providers
+ORDER BY specialty;` },
+
+  // ---------- INTERMEDIATE ----------
+  { diff: 'intermediate', num: 11,
+    title: 'Appointment volume by department',
+    desc: 'For each department, how many appointments were scheduled total? Return department name and count, highest first.',
+    hint: 'GROUP BY department, COUNT(*), JOIN to get the department name.',
+    sql: `SELECT
+  d.department_name,
+  COUNT(*) AS appointment_count
+FROM appointments a
+JOIN departments d ON a.department_id = d.department_id
+GROUP BY d.department_name
+ORDER BY appointment_count DESC;` },
+  { diff: 'intermediate', num: 12,
+    title: 'Provider productivity (completed appointments only)',
+    desc: 'Rank providers by completed appointments. Show provider name (first + last), department, and completed count. Top 10.',
+    hint: 'Filter status = "Completed", GROUP BY provider, JOIN providers + departments.',
+    sql: `SELECT
+  p.first_name || ' ' || p.last_name AS provider,
+  d.department_name,
+  COUNT(*) AS completed_visits
+FROM appointments a
+JOIN providers p   ON a.provider_id = p.provider_id
+JOIN departments d ON p.department_id = d.department_id
+WHERE a.status = 'Completed'
+GROUP BY p.provider_id, p.first_name, p.last_name, d.department_name
+ORDER BY completed_visits DESC
+LIMIT 10;` },
+  { diff: 'intermediate', num: 13,
+    title: 'No-show rate by department',
+    desc: 'For each department, what percentage of appointments were no-shows? Show department name, total appointments, no-show count, and no-show percent (1 decimal). Sort by no-show percent descending.',
+    hint: 'Conditional aggregation. SUM(CASE WHEN status = "No-Show" THEN 1 ELSE 0 END) / COUNT(*). Multiply by 100.0 to force float math.',
+    sql: `SELECT
+  d.department_name,
+  COUNT(*) AS total_appts,
+  SUM(CASE WHEN a.status = 'No-Show' THEN 1 ELSE 0 END) AS no_shows,
+  ROUND(100.0 * SUM(CASE WHEN a.status = 'No-Show' THEN 1 ELSE 0 END) / COUNT(*), 1) AS no_show_pct
+FROM appointments a
+JOIN departments d ON a.department_id = d.department_id
+GROUP BY d.department_name
+ORDER BY no_show_pct DESC;` },
+  { diff: 'intermediate', num: 14,
+    title: 'Average patient wait time by provider',
+    desc: 'For completed appointments only, what is the average wait time per provider? Show provider name, department, completed count, and avg wait in minutes (rounded). Only include providers with at least 5 completed visits. Sort by avg wait ascending (fastest first).',
+    hint: 'Filter status. GROUP BY provider. HAVING COUNT(*) >= 5.',
+    sql: `SELECT
+  p.first_name || ' ' || p.last_name AS provider,
+  d.department_name,
+  COUNT(*) AS completed_visits,
+  ROUND(AVG(a.wait_time_minutes), 1) AS avg_wait_min
+FROM appointments a
+JOIN providers p   ON a.provider_id = p.provider_id
+JOIN departments d ON p.department_id = d.department_id
+WHERE a.status = 'Completed'
+GROUP BY p.provider_id, p.first_name, p.last_name, d.department_name
+HAVING COUNT(*) >= 5
+ORDER BY avg_wait_min ASC;` },
+  { diff: 'intermediate', num: 15,
+    title: 'Most common primary diagnoses',
+    desc: 'What are the top 10 most common primary diagnoses (is_primary = 1) across all encounters? Show ICD code, description, and how many encounters had it.',
+    hint: 'Filter is_primary = 1. GROUP BY icd_code (description too, since GROUP BY rules). ORDER BY count DESC.',
+    sql: `SELECT
+  icd_code,
+  diagnosis_description,
+  COUNT(*) AS encounter_count
+FROM diagnoses
+WHERE is_primary = 1
+GROUP BY icd_code, diagnosis_description
+ORDER BY encounter_count DESC
+LIMIT 10;` },
+  { diff: 'intermediate', num: 16,
+    title: 'Patient count by gender',
+    desc: 'How many patients are in each gender category? Show gender and patient_count, biggest first.',
+    hint: 'GROUP BY gender. Simple aggregate.',
+    sql: `SELECT gender, COUNT(*) AS patient_count
+FROM patients
+GROUP BY gender
+ORDER BY patient_count DESC;` },
+  { diff: 'intermediate', num: 17,
+    title: 'Average length of stay by department (Inpatient)',
+    desc: 'For inpatient encounters only, what is the average length of stay by department? Show department_name and avg_los (1 decimal). Longest first.',
+    hint: "Filter encounter_type = 'Inpatient'. JOIN departments. GROUP BY, AVG, ROUND.",
+    sql: `SELECT
+  d.department_name,
+  ROUND(AVG(e.length_of_stay), 1) AS avg_los
+FROM encounters e
+JOIN departments d ON e.department_id = d.department_id
+WHERE e.encounter_type = 'Inpatient'
+GROUP BY d.department_name
+ORDER BY avg_los DESC;` },
+  { diff: 'intermediate', num: 18,
+    title: 'Insurance distribution',
+    desc: 'How many patients are covered by each payer? Show payer_name and patient_count. Most common first.',
+    hint: 'JOIN patients to insurance, GROUP BY payer_name.',
+    sql: `SELECT
+  i.payer_name,
+  COUNT(*) AS patient_count
+FROM patients p
+JOIN insurance i ON p.insurance_id = i.insurance_id
+GROUP BY i.payer_name
+ORDER BY patient_count DESC;` },
+  { diff: 'intermediate', num: 19,
+    title: 'Most expensive procedure types',
+    desc: 'Identify the top 5 procedure types by average cost. Show cpt_code, procedure_description, performed_count, and avg_cost (2 decimals).',
+    hint: 'GROUP BY cpt_code and procedure_description. AVG(cost). ORDER BY avg DESC, LIMIT 5.',
+    sql: `SELECT
+  cpt_code,
+  procedure_description,
+  COUNT(*) AS performed_count,
+  ROUND(AVG(cost), 2) AS avg_cost
+FROM procedures
+GROUP BY cpt_code, procedure_description
+ORDER BY avg_cost DESC
+LIMIT 5;` },
+  { diff: 'intermediate', num: 20,
+    title: 'Provider count by department',
+    desc: 'How many providers does each department have? Show department_name and provider_count, biggest first.',
+    hint: 'JOIN providers to departments, GROUP BY department_name.',
+    sql: `SELECT
+  d.department_name,
+  COUNT(*) AS provider_count
+FROM providers p
+JOIN departments d ON p.department_id = d.department_id
+GROUP BY d.department_name
+ORDER BY provider_count DESC;` },
+
+  // ---------- ADVANCED ----------
+  { diff: 'advanced', num: 21,
+    title: '30-day readmission candidates',
+    desc: 'Identify patients who had an inpatient encounter, then any other encounter within 30 days of discharge. Show patient_id, the index encounter_id, the original discharge date, the readmit encounter_id, the readmit admission date, and the gap in days.',
+    hint: 'Self-join encounters on patient_id with a date condition. In SQLite, date(e1.discharge_date, "+30 days").',
+    sql: `SELECT
+  e1.patient_id,
+  e1.encounter_id   AS index_encounter,
+  e1.discharge_date AS index_discharge,
+  e2.encounter_id   AS readmit_encounter,
+  e2.admission_date AS readmit_admission,
+  CAST(julianday(e2.admission_date) - julianday(e1.discharge_date) AS INTEGER) AS gap_days
+FROM encounters e1
+JOIN encounters e2
+  ON e1.patient_id = e2.patient_id
+ AND e2.encounter_id != e1.encounter_id
+ AND e2.admission_date > e1.discharge_date
+ AND e2.admission_date <= date(e1.discharge_date, '+30 days')
+WHERE e1.encounter_type = 'Inpatient'
+ORDER BY e1.patient_id, e1.discharge_date;` },
+  { diff: 'advanced', num: 22,
+    title: 'Rank providers within each department by volume',
+    desc: 'Within each department, rank providers by their total completed appointments. Show department, provider, completed count, and a within-department rank (1 = highest).',
+    hint: 'Window function: RANK() OVER (PARTITION BY department ORDER BY count DESC). Build the aggregate first, then apply the window.',
+    sql: `WITH provider_volume AS (
+  SELECT
+    d.department_name,
+    p.provider_id,
+    p.first_name || ' ' || p.last_name AS provider,
+    COUNT(*) AS completed_visits
+  FROM appointments a
+  JOIN providers p   ON a.provider_id = p.provider_id
+  JOIN departments d ON p.department_id = d.department_id
+  WHERE a.status = 'Completed'
+  GROUP BY d.department_name, p.provider_id, p.first_name, p.last_name
+)
+SELECT
+  department_name,
+  provider,
+  completed_visits,
+  RANK() OVER (PARTITION BY department_name ORDER BY completed_visits DESC) AS dept_rank
+FROM provider_volume
+ORDER BY department_name, dept_rank;` },
+  { diff: 'advanced', num: 23,
+    title: 'Departments where LOS exceeds the overall average',
+    desc: 'For inpatient encounters only, find departments whose average length of stay is greater than the overall average inpatient LOS. Show department, its avg LOS, and the overall avg LOS for comparison.',
+    hint: 'You need a subquery (or CTE) for the overall avg. Filter inpatient in both. HAVING clause comparing the dept avg to the overall scalar.',
+    sql: `WITH overall AS (
+  SELECT AVG(length_of_stay) AS avg_los
+  FROM encounters
+  WHERE encounter_type = 'Inpatient'
+)
+SELECT
+  d.department_name,
+  ROUND(AVG(e.length_of_stay), 2) AS dept_avg_los,
+  ROUND((SELECT avg_los FROM overall), 2) AS overall_avg_los
+FROM encounters e
+JOIN departments d ON e.department_id = d.department_id
+WHERE e.encounter_type = 'Inpatient'
+GROUP BY d.department_name
+HAVING AVG(e.length_of_stay) > (SELECT avg_los FROM overall)
+ORDER BY dept_avg_los DESC;` },
+  { diff: 'advanced', num: 24,
+    title: 'Monthly appointment volume with no-show trend',
+    desc: 'Pull a month-by-month report: month (YYYY-MM), total appointments, no-shows, and no-show percent. Chronological order.',
+    hint: 'In SQLite, strftime("%Y-%m", scheduled_datetime). Group by that month string.',
+    sql: `SELECT
+  strftime('%Y-%m', scheduled_datetime) AS month,
+  COUNT(*) AS total_appts,
+  SUM(CASE WHEN status = 'No-Show' THEN 1 ELSE 0 END) AS no_shows,
+  ROUND(100.0 * SUM(CASE WHEN status = 'No-Show' THEN 1 ELSE 0 END) / COUNT(*), 1) AS no_show_pct
+FROM appointments
+GROUP BY month
+ORDER BY month;` },
+  { diff: 'advanced', num: 25,
+    title: 'ER patients with a follow-up within 14 days',
+    desc: 'A care-coordination metric: of patients who had an ER encounter, how many had any other encounter (outpatient or inpatient) within 14 days? Return patient_id, the ER encounter_id, the ER encounter date, the follow-up encounter_id, the follow-up encounter date, follow-up type, and the gap in days.',
+    hint: 'Self-join encounters. First copy filtered to ER. Second filtered to Outpatient/Inpatient. Date window: 0–14 days.',
+    sql: `SELECT
+  er.patient_id,
+  er.encounter_id   AS er_encounter,
+  er.admission_date AS er_date,
+  fu.encounter_id   AS followup_encounter,
+  fu.admission_date AS followup_date,
+  fu.encounter_type AS followup_type,
+  CAST(julianday(fu.admission_date) - julianday(er.admission_date) AS INTEGER) AS gap_days
+FROM encounters er
+JOIN encounters fu
+  ON er.patient_id = fu.patient_id
+ AND fu.encounter_id != er.encounter_id
+ AND fu.admission_date >= er.admission_date
+ AND fu.admission_date <= date(er.admission_date, '+14 days')
+ AND fu.encounter_type IN ('Outpatient', 'Inpatient')
+WHERE er.encounter_type = 'ER'
+ORDER BY er.patient_id, er.admission_date;` },
+  { diff: 'advanced', num: 26,
+    title: 'Top 10 patients by encounter count',
+    desc: 'Which patients have the most encounters? Show patient_id, full_name, and encounter_count for the top 10.',
+    hint: 'GROUP BY patient_id with COUNT. JOIN to patients for the name. LIMIT 10.',
+    sql: `SELECT
+  p.patient_id,
+  p.first_name || ' ' || p.last_name AS full_name,
+  COUNT(e.encounter_id) AS encounter_count
+FROM patients p
+JOIN encounters e ON p.patient_id = e.patient_id
+GROUP BY p.patient_id, p.first_name, p.last_name
+ORDER BY encounter_count DESC
+LIMIT 10;` },
+  { diff: 'advanced', num: 27,
+    title: 'Provider–patient loyalty',
+    desc: 'Identify patient/provider pairs where the same patient saw the same provider more than once for completed appointments. Return patient_id, provider_id, and visit_count. Most loyal pairs first.',
+    hint: "GROUP BY patient_id, provider_id. HAVING COUNT(*) > 1. Filter status = 'Completed'.",
+    sql: `SELECT
+  patient_id,
+  provider_id,
+  COUNT(*) AS visit_count
+FROM appointments
+WHERE status = 'Completed'
+GROUP BY patient_id, provider_id
+HAVING COUNT(*) > 1
+ORDER BY visit_count DESC, patient_id;` },
+  { diff: 'advanced', num: 28,
+    title: 'Encounters with no procedures recorded',
+    desc: 'Find every encounter that has no procedures recorded against it (a data quality / billing check). Return encounter_id, patient_id, encounter_type, and admission_date.',
+    hint: 'LEFT JOIN encounters to procedures and filter where procedures.procedure_id IS NULL.',
+    sql: `SELECT
+  e.encounter_id,
+  e.patient_id,
+  e.encounter_type,
+  e.admission_date
+FROM encounters e
+LEFT JOIN procedures pr ON e.encounter_id = pr.encounter_id
+WHERE pr.procedure_id IS NULL
+ORDER BY e.encounter_id;` },
+  { diff: 'advanced', num: 29,
+    title: 'Time between consecutive appointments per patient',
+    desc: 'For each patient with at least two completed appointments, calculate the average number of days between consecutive appointments. Return patient_id and avg_days_between_visits (1 decimal). Shortest gaps first.',
+    hint: 'LAG() window partitioned by patient_id ordered by scheduled_datetime. Then aggregate avg per patient.',
+    sql: `WITH ordered AS (
+  SELECT
+    patient_id,
+    scheduled_datetime,
+    LAG(scheduled_datetime) OVER (PARTITION BY patient_id ORDER BY scheduled_datetime) AS prev_dt
+  FROM appointments
+  WHERE status = 'Completed'
+)
+SELECT
+  patient_id,
+  ROUND(AVG(julianday(scheduled_datetime) - julianday(prev_dt)), 1) AS avg_days_between_visits
+FROM ordered
+WHERE prev_dt IS NOT NULL
+GROUP BY patient_id
+ORDER BY avg_days_between_visits;` },
+  { diff: 'advanced', num: 30,
+    title: 'Monthly procedure volume and cost trend',
+    desc: 'For each month, show how many procedures were performed, total cost, and average cost per procedure (2 decimals). Chronological order.',
+    hint: "GROUP BY strftime('%Y-%m', procedure_date). COUNT, SUM, AVG.",
+    sql: `SELECT
+  strftime('%Y-%m', procedure_date) AS month,
+  COUNT(*) AS proc_count,
+  ROUND(SUM(cost), 2) AS total_cost,
+  ROUND(AVG(cost), 2) AS avg_cost
+FROM procedures
+GROUP BY month
+ORDER BY month;` },
+];
+
+const PROBLEMS_FINANCIAL = [
+  // ---------- BEGINNER ----------
+  { diff: 'beginner', num: 1,
+    title: 'List all departments with their region',
+    desc: 'Pull department_name and region for every cost center. Alphabetize by name.',
+    hint: 'Simple SELECT from departments.',
+    sql: `SELECT department_name, region
+FROM departments
+ORDER BY department_name;` },
+  { diff: 'beginner', num: 2,
+    title: 'Total customer count',
+    desc: 'How many customers does the company have? Single number.',
+    hint: 'COUNT(*) on customers.',
+    sql: `SELECT COUNT(*) AS total_customers
+FROM customers;` },
+  { diff: 'beginner', num: 3,
+    title: 'Enterprise segment customers',
+    desc: 'Pull customer_id, company_name, and industry for every customer in the Enterprise segment. Alphabetize by company.',
+    hint: "WHERE segment = 'Enterprise'.",
+    sql: `SELECT customer_id, company_name, industry
+FROM customers
+WHERE segment = 'Enterprise'
+ORDER BY company_name;` },
+  { diff: 'beginner', num: 4,
+    title: 'Premium products',
+    desc: 'List products with unit_price greater than $1,000. Show product_name, category, and unit_price. Most expensive first.',
+    hint: 'Filter unit_price > 1000.',
+    sql: `SELECT product_name, category, unit_price
+FROM products
+WHERE unit_price > 1000
+ORDER BY unit_price DESC;` },
+  { diff: 'beginner', num: 5,
+    title: 'All overdue invoices',
+    desc: 'Pull invoice_id, customer_id, amount, and due_date for every invoice marked Overdue. Oldest due_date first.',
+    hint: "Filter status = 'Overdue'.",
+    sql: `SELECT invoice_id, customer_id, amount, due_date
+FROM invoices
+WHERE status = 'Overdue'
+ORDER BY due_date;` },
+  { diff: 'beginner', num: 6,
+    title: 'Total revenue from paid invoices',
+    desc: 'Sum the amount of all paid invoices. Single number, rounded to 2 decimals.',
+    hint: "SUM(amount) WHERE status = 'Paid'.",
+    sql: `SELECT ROUND(SUM(amount), 2) AS total_paid_revenue
+FROM invoices
+WHERE status = 'Paid';` },
+  { diff: 'beginner', num: 7,
+    title: 'Customers signed up in 2025',
+    desc: 'List customer_id, company_name, and signup_date for customers who joined in 2025. Chronological.',
+    hint: "Filter signup_date in 2025.",
+    sql: `SELECT customer_id, company_name, signup_date
+FROM customers
+WHERE signup_date >= '2025-01-01'
+  AND signup_date < '2026-01-01'
+ORDER BY signup_date;` },
+  { diff: 'beginner', num: 8,
+    title: 'Five largest expenses',
+    desc: 'Pull the top 5 expenses by amount. Show expense_id, expense_category, vendor, amount, and expense_date.',
+    hint: 'ORDER BY amount DESC, LIMIT 5.',
+    sql: `SELECT expense_id, expense_category, vendor, amount, expense_date
+FROM expenses
+ORDER BY amount DESC
+LIMIT 5;` },
+  { diff: 'beginner', num: 9,
+    title: 'Customer count by industry',
+    desc: 'How many customers belong to each industry? Most populous first.',
+    hint: 'GROUP BY industry.',
+    sql: `SELECT industry, COUNT(*) AS customer_count
+FROM customers
+GROUP BY industry
+ORDER BY customer_count DESC;` },
+  { diff: 'beginner', num: 10,
+    title: 'Average invoice amount',
+    desc: 'What is the average invoice amount across all invoices? Round to 2 decimals.',
+    hint: 'AVG(amount), ROUND.',
+    sql: `SELECT ROUND(AVG(amount), 2) AS avg_invoice_amount
+FROM invoices;` },
+
+  // ---------- INTERMEDIATE ----------
+  { diff: 'intermediate', num: 11,
+    title: 'Total revenue by customer segment',
+    desc: 'Sum paid invoice amounts grouped by customer segment. Show segment and total_revenue (2 decimals). Largest first.',
+    hint: 'JOIN customers to invoices, filter status, GROUP BY segment.',
+    sql: `SELECT
+  c.segment,
+  ROUND(SUM(i.amount), 2) AS total_revenue
+FROM invoices i
+JOIN customers c ON i.customer_id = c.customer_id
+WHERE i.status = 'Paid'
+GROUP BY c.segment
+ORDER BY total_revenue DESC;` },
+  { diff: 'intermediate', num: 12,
+    title: 'Top 5 customers by total invoiced',
+    desc: 'Which customers have been invoiced the most overall? Show customer_id, company_name, and total_invoiced (2 decimals). Top 5.',
+    hint: 'SUM(amount) over invoices, GROUP BY customer.',
+    sql: `SELECT
+  c.customer_id,
+  c.company_name,
+  ROUND(SUM(i.amount), 2) AS total_invoiced
+FROM invoices i
+JOIN customers c ON i.customer_id = c.customer_id
+GROUP BY c.customer_id, c.company_name
+ORDER BY total_invoiced DESC
+LIMIT 5;` },
+  { diff: 'intermediate', num: 13,
+    title: 'Expense breakdown by department',
+    desc: 'For each department, what are the total operating expenses? Show department_name and total_expenses (2 decimals). Highest first.',
+    hint: 'JOIN expenses + departments, SUM, GROUP BY.',
+    sql: `SELECT
+  d.department_name,
+  ROUND(SUM(e.amount), 2) AS total_expenses
+FROM expenses e
+JOIN departments d ON e.department_id = d.department_id
+GROUP BY d.department_name
+ORDER BY total_expenses DESC;` },
+  { diff: 'intermediate', num: 14,
+    title: 'Gross margin by product category',
+    desc: 'For each product category, compute the average gross margin in dollars and as a percentage of price. Show category, avg_margin (2 dec) and avg_margin_pct (1 dec). Highest margin pct first.',
+    hint: 'unit_price - unit_cost is the per-unit margin. For pct, divide by price and multiply by 100.0.',
+    sql: `SELECT
+  category,
+  ROUND(AVG(unit_price - unit_cost), 2) AS avg_margin,
+  ROUND(AVG((unit_price - unit_cost) * 100.0 / unit_price), 1) AS avg_margin_pct
+FROM products
+GROUP BY category
+ORDER BY avg_margin_pct DESC;` },
+  { diff: 'intermediate', num: 15,
+    title: 'Invoice status distribution',
+    desc: 'For each invoice status, how many invoices and what total amount? Show status, invoice_count, total_amount (2 dec). Most invoices first.',
+    hint: 'GROUP BY status. COUNT and SUM.',
+    sql: `SELECT
+  status,
+  COUNT(*) AS invoice_count,
+  ROUND(SUM(amount), 2) AS total_amount
+FROM invoices
+GROUP BY status
+ORDER BY invoice_count DESC;` },
+  { diff: 'intermediate', num: 16,
+    title: 'Monthly revenue trend (paid invoices)',
+    desc: 'Show monthly revenue from paid invoices. Output month (YYYY-MM) and revenue (2 decimals). Chronological.',
+    hint: "strftime('%Y-%m', invoice_date) for month, SUM amount.",
+    sql: `SELECT
+  strftime('%Y-%m', invoice_date) AS month,
+  ROUND(SUM(amount), 2) AS revenue
+FROM invoices
+WHERE status = 'Paid'
+GROUP BY month
+ORDER BY month;` },
+  { diff: 'intermediate', num: 17,
+    title: 'Top vendors by total spend',
+    desc: 'Which vendors did the company pay the most overall? Show vendor, expense_count, and total_amount (2 dec). Top 10.',
+    hint: 'GROUP BY vendor. COUNT + SUM. LIMIT 10.',
+    sql: `SELECT
+  vendor,
+  COUNT(*) AS expense_count,
+  ROUND(SUM(amount), 2) AS total_amount
+FROM expenses
+GROUP BY vendor
+ORDER BY total_amount DESC
+LIMIT 10;` },
+  { diff: 'intermediate', num: 18,
+    title: 'Customer count by region and segment',
+    desc: 'How many customers fall into each region/segment combo? Show region, segment, customer_count. Order by region then segment.',
+    hint: 'GROUP BY two columns.',
+    sql: `SELECT
+  region,
+  segment,
+  COUNT(*) AS customer_count
+FROM customers
+GROUP BY region, segment
+ORDER BY region, segment;` },
+  { diff: 'intermediate', num: 19,
+    title: 'Payment method distribution',
+    desc: 'How many payments came via each method, and what is the total amount? Show payment_method, payment_count, and total_amount (2 dec). Biggest total first.',
+    hint: 'GROUP BY payment_method on payments.',
+    sql: `SELECT
+  payment_method,
+  COUNT(*) AS payment_count,
+  ROUND(SUM(amount), 2) AS total_amount
+FROM payments
+GROUP BY payment_method
+ORDER BY total_amount DESC;` },
+  { diff: 'intermediate', num: 20,
+    title: 'Top 5 products by total order revenue',
+    desc: 'Show product_name, category, units_sold, and total_revenue (2 dec) for the top 5 products by revenue.',
+    hint: 'JOIN orders + products. SUM quantity, SUM total_amount. LIMIT 5.',
+    sql: `SELECT
+  p.product_name,
+  p.category,
+  SUM(o.quantity) AS units_sold,
+  ROUND(SUM(o.total_amount), 2) AS total_revenue
+FROM orders o
+JOIN products p ON o.product_id = p.product_id
+GROUP BY p.product_id, p.product_name, p.category
+ORDER BY total_revenue DESC
+LIMIT 5;` },
+
+  // ---------- ADVANCED ----------
+  { diff: 'advanced', num: 21,
+    title: 'Customer lifetime value (sum of payments)',
+    desc: 'For each customer who has made at least one payment, calculate lifetime value as the sum of payments received. Show customer_id, company_name, lifetime_value (2 dec). Highest first.',
+    hint: 'Chain customers → invoices → payments. SUM payments.amount grouped by customer.',
+    sql: `SELECT
+  c.customer_id,
+  c.company_name,
+  ROUND(SUM(p.amount), 2) AS lifetime_value
+FROM customers c
+JOIN invoices i ON c.customer_id = i.customer_id
+JOIN payments p ON i.invoice_id = p.invoice_id
+GROUP BY c.customer_id, c.company_name
+ORDER BY lifetime_value DESC;` },
+  { diff: 'advanced', num: 22,
+    title: 'Days to payment per invoice',
+    desc: 'For every paid invoice, compute days between invoice_date and payment_date. Show invoice_id, invoice_date, payment_date, and days_to_payment. Longest first.',
+    hint: 'julianday(payment_date) - julianday(invoice_date), cast to INTEGER.',
+    sql: `SELECT
+  i.invoice_id,
+  i.invoice_date,
+  p.payment_date,
+  CAST(julianday(p.payment_date) - julianday(i.invoice_date) AS INTEGER) AS days_to_payment
+FROM invoices i
+JOIN payments p ON i.invoice_id = p.invoice_id
+ORDER BY days_to_payment DESC;` },
+  { diff: 'advanced', num: 23,
+    title: 'Cohort analysis — revenue by signup month',
+    desc: 'Group customers by their signup month. For each cohort, show customers and total_revenue (paid invoices, 2 dec). Show cohort_month (YYYY-MM), customers, total_revenue. Chronological.',
+    hint: "GROUP BY strftime('%Y-%m', signup_date). JOIN to invoices, filter paid.",
+    sql: `SELECT
+  strftime('%Y-%m', c.signup_date) AS cohort_month,
+  COUNT(DISTINCT c.customer_id) AS customers,
+  ROUND(SUM(i.amount), 2) AS total_revenue
+FROM customers c
+JOIN invoices i ON c.customer_id = i.customer_id
+WHERE i.status = 'Paid'
+GROUP BY cohort_month
+ORDER BY cohort_month;` },
+  { diff: 'advanced', num: 24,
+    title: 'Rank customers within segment by invoiced amount',
+    desc: 'Within each segment, rank customers by total invoiced amount. Show segment, company_name, total_invoiced (2 dec), and segment_rank (1 = highest).',
+    hint: 'CTE for the aggregate. RANK() OVER (PARTITION BY segment ORDER BY total DESC).',
+    sql: `WITH customer_totals AS (
+  SELECT
+    c.segment,
+    c.customer_id,
+    c.company_name,
+    SUM(i.amount) AS total_invoiced
+  FROM customers c
+  JOIN invoices i ON c.customer_id = i.customer_id
+  GROUP BY c.segment, c.customer_id, c.company_name
+)
+SELECT
+  segment,
+  company_name,
+  ROUND(total_invoiced, 2) AS total_invoiced,
+  RANK() OVER (PARTITION BY segment ORDER BY total_invoiced DESC) AS segment_rank
+FROM customer_totals
+ORDER BY segment, segment_rank;` },
+  { diff: 'advanced', num: 25,
+    title: 'Departments with expenses above overall average',
+    desc: 'Find departments whose average expense amount exceeds the overall average expense amount. Show department_name, dept_avg, and overall_avg (both 2 dec). Highest dept_avg first.',
+    hint: 'Scalar subquery / CTE for overall AVG(amount). HAVING dept_avg > overall_avg.',
+    sql: `WITH overall AS (
+  SELECT AVG(amount) AS avg_amt FROM expenses
+)
+SELECT
+  d.department_name,
+  ROUND(AVG(e.amount), 2) AS dept_avg,
+  ROUND((SELECT avg_amt FROM overall), 2) AS overall_avg
+FROM expenses e
+JOIN departments d ON e.department_id = d.department_id
+GROUP BY d.department_name
+HAVING AVG(e.amount) > (SELECT avg_amt FROM overall)
+ORDER BY dept_avg DESC;` },
+  { diff: 'advanced', num: 26,
+    title: 'Cumulative revenue by month',
+    desc: 'Show monthly revenue from paid invoices plus a running cumulative total. Output month, month_revenue (2 dec), cumulative_revenue (2 dec). Chronological.',
+    hint: 'GROUP BY month, then window SUM() OVER (ORDER BY month) for cumulative.',
+    sql: `WITH monthly AS (
+  SELECT
+    strftime('%Y-%m', invoice_date) AS month,
+    SUM(amount) AS month_revenue
+  FROM invoices
+  WHERE status = 'Paid'
+  GROUP BY month
+)
+SELECT
+  month,
+  ROUND(month_revenue, 2) AS month_revenue,
+  ROUND(SUM(month_revenue) OVER (ORDER BY month), 2) AS cumulative_revenue
+FROM monthly
+ORDER BY month;` },
+  { diff: 'advanced', num: 27,
+    title: 'Customers with multiple overdue invoices',
+    desc: 'Find customers with more than one Overdue invoice. Show customer_id, company_name, overdue_count, and total_overdue (2 dec). Worst offenders first.',
+    hint: "Filter status = 'Overdue'. GROUP BY customer. HAVING COUNT > 1.",
+    sql: `SELECT
+  c.customer_id,
+  c.company_name,
+  COUNT(*) AS overdue_count,
+  ROUND(SUM(i.amount), 2) AS total_overdue
+FROM invoices i
+JOIN customers c ON i.customer_id = c.customer_id
+WHERE i.status = 'Overdue'
+GROUP BY c.customer_id, c.company_name
+HAVING COUNT(*) > 1
+ORDER BY total_overdue DESC;` },
+  { diff: 'advanced', num: 28,
+    title: 'Profitability by product category',
+    desc: 'For each product category, compute units sold, gross revenue (qty × price), cost (qty × unit_cost), and gross profit. All money fields 2 dec. Highest gross_profit first.',
+    hint: 'JOIN orders + products. Use unit_price and unit_cost from products for comparable math.',
+    sql: `SELECT
+  p.category,
+  SUM(o.quantity) AS units_sold,
+  ROUND(SUM(o.quantity * p.unit_price), 2) AS revenue,
+  ROUND(SUM(o.quantity * p.unit_cost), 2) AS cost,
+  ROUND(SUM(o.quantity * (p.unit_price - p.unit_cost)), 2) AS gross_profit
+FROM orders o
+JOIN products p ON o.product_id = p.product_id
+GROUP BY p.category
+ORDER BY gross_profit DESC;` },
+  { diff: 'advanced', num: 29,
+    title: 'Days Sales Outstanding (DSO) per customer',
+    desc: 'For each customer with at least two paid invoices, compute the average days to pay (payment_date - invoice_date). Show customer_id, company_name, avg_dso (1 dec). Slowest payers first.',
+    hint: 'JOIN customers → invoices → payments. AVG(julianday diff). HAVING COUNT >= 2.',
+    sql: `SELECT
+  c.customer_id,
+  c.company_name,
+  ROUND(AVG(julianday(p.payment_date) - julianday(i.invoice_date)), 1) AS avg_dso
+FROM customers c
+JOIN invoices i ON c.customer_id = i.customer_id
+JOIN payments p ON i.invoice_id = p.invoice_id
+GROUP BY c.customer_id, c.company_name
+HAVING COUNT(*) >= 2
+ORDER BY avg_dso DESC;` },
+  { diff: 'advanced', num: 30,
+    title: 'Pareto — top 20% of customers by revenue',
+    desc: 'Identify customers in the top quintile by paid revenue. For each, show customer_id, revenue (2 dec), and pct_of_total (2 dec).',
+    hint: 'NTILE(5) for quintile. SUM() OVER () for total.',
+    sql: `WITH customer_rev AS (
+  SELECT customer_id, SUM(amount) AS revenue
+  FROM invoices
+  WHERE status = 'Paid'
+  GROUP BY customer_id
+),
+ranked AS (
+  SELECT
+    customer_id,
+    revenue,
+    NTILE(5) OVER (ORDER BY revenue DESC) AS quintile,
+    SUM(revenue) OVER () AS total
+  FROM customer_rev
+)
+SELECT
+  customer_id,
+  ROUND(revenue, 2) AS revenue,
+  ROUND(100.0 * revenue / total, 2) AS pct_of_total
+FROM ranked
+WHERE quintile = 1
+ORDER BY revenue DESC;` },
+];
+
+const PROBLEMS_MARKETING = [
+  // ---------- BEGINNER ----------
+  { diff: 'beginner', num: 1,
+    title: 'List all marketing channels',
+    desc: 'Pull channel_name and channel_type for every channel. Alphabetize by name.',
+    hint: 'Simple SELECT from channels.',
+    sql: `SELECT channel_name, channel_type
+FROM channels
+ORDER BY channel_name;` },
+  { diff: 'beginner', num: 2,
+    title: 'Total leads',
+    desc: 'How many leads are in the system? Single number.',
+    hint: 'COUNT(*) on leads.',
+    sql: `SELECT COUNT(*) AS total_leads
+FROM leads;` },
+  { diff: 'beginner', num: 3,
+    title: 'All qualified leads',
+    desc: 'List lead_id, source_channel_id, created_date, and lead_score for leads with status = "Qualified". Highest score first.',
+    hint: "WHERE status = 'Qualified'.",
+    sql: `SELECT lead_id, source_channel_id, created_date, lead_score
+FROM leads
+WHERE status = 'Qualified'
+ORDER BY lead_score DESC;` },
+  { diff: 'beginner', num: 4,
+    title: 'Active campaigns',
+    desc: 'Pull campaign_id, campaign_name, start_date, and budget for all campaigns with status = "Active". Sort by start_date.',
+    hint: "Filter status = 'Active'.",
+    sql: `SELECT campaign_id, campaign_name, start_date, budget
+FROM campaigns
+WHERE status = 'Active'
+ORDER BY start_date;` },
+  { diff: 'beginner', num: 5,
+    title: 'Big-budget campaigns',
+    desc: 'List campaigns with a budget greater than $20,000. Show campaign_name, channel_id, and budget. Biggest first.',
+    hint: 'Filter budget > 20000.',
+    sql: `SELECT campaign_name, channel_id, budget
+FROM campaigns
+WHERE budget > 20000
+ORDER BY budget DESC;` },
+  { diff: 'beginner', num: 6,
+    title: 'Total ad spend',
+    desc: 'Sum amount across all ad_spend records. Single number, 2 decimals.',
+    hint: 'SUM(amount) on ad_spend.',
+    sql: `SELECT ROUND(SUM(amount), 2) AS total_ad_spend
+FROM ad_spend;` },
+  { diff: 'beginner', num: 7,
+    title: 'Customers acquired in 2025',
+    desc: 'Pull customer_id, conversion_date, acquisition_channel_id, and segment for customers converted in 2025. Chronological.',
+    hint: "WHERE conversion_date in 2025.",
+    sql: `SELECT customer_id, conversion_date, acquisition_channel_id, segment
+FROM customers
+WHERE conversion_date >= '2025-01-01'
+  AND conversion_date < '2026-01-01'
+ORDER BY conversion_date;` },
+  { diff: 'beginner', num: 8,
+    title: 'Hot leads (score > 80)',
+    desc: 'Pull lead_id, source_channel_id, status, and lead_score for leads with lead_score > 80. Highest first.',
+    hint: 'Filter lead_score > 80.',
+    sql: `SELECT lead_id, source_channel_id, status, lead_score
+FROM leads
+WHERE lead_score > 80
+ORDER BY lead_score DESC;` },
+  { diff: 'beginner', num: 9,
+    title: 'Ten most recent conversions',
+    desc: 'Show conversion_id, customer_id, conversion_date, conversion_type, and revenue for the 10 most recent conversions.',
+    hint: 'ORDER BY conversion_date DESC, LIMIT 10.',
+    sql: `SELECT conversion_id, customer_id, conversion_date, conversion_type, revenue
+FROM conversions
+ORDER BY conversion_date DESC
+LIMIT 10;` },
+  { diff: 'beginner', num: 10,
+    title: 'Distinct conversion types',
+    desc: 'Return the unique list of conversion_type values, alphabetized.',
+    hint: 'SELECT DISTINCT.',
+    sql: `SELECT DISTINCT conversion_type
+FROM conversions
+ORDER BY conversion_type;` },
+
+  // ---------- INTERMEDIATE ----------
+  { diff: 'intermediate', num: 11,
+    title: 'Lead count by source channel',
+    desc: 'How many leads came from each channel? Show channel_name and lead_count. Biggest source first.',
+    hint: 'JOIN leads to channels on source_channel_id.',
+    sql: `SELECT
+  ch.channel_name,
+  COUNT(*) AS lead_count
+FROM leads l
+JOIN channels ch ON l.source_channel_id = ch.channel_id
+GROUP BY ch.channel_name
+ORDER BY lead_count DESC;` },
+  { diff: 'intermediate', num: 12,
+    title: 'Total ad spend by channel',
+    desc: 'Sum ad spend by channel. Show channel_name and total_spend (2 dec). Highest first.',
+    hint: 'JOIN ad_spend → campaigns → channels.',
+    sql: `SELECT
+  ch.channel_name,
+  ROUND(SUM(a.amount), 2) AS total_spend
+FROM ad_spend a
+JOIN campaigns c ON a.campaign_id = c.campaign_id
+JOIN channels ch ON c.channel_id = ch.channel_id
+GROUP BY ch.channel_name
+ORDER BY total_spend DESC;` },
+  { diff: 'intermediate', num: 13,
+    title: 'Top 5 campaigns by conversions',
+    desc: 'Which campaigns drove the most conversions? Show campaign_name and conversion_count. Top 5.',
+    hint: 'JOIN conversions to campaigns. GROUP BY, COUNT, LIMIT 5.',
+    sql: `SELECT
+  c.campaign_name,
+  COUNT(*) AS conversion_count
+FROM conversions co
+JOIN campaigns c ON co.campaign_id = c.campaign_id
+GROUP BY c.campaign_id, c.campaign_name
+ORDER BY conversion_count DESC
+LIMIT 5;` },
+  { diff: 'intermediate', num: 14,
+    title: 'Conversion rate by channel',
+    desc: 'For each channel, compute conversion rate as converted leads / total leads. Show channel_name, total_leads, converted_leads, and conversion_pct (1 dec).',
+    hint: "Conditional aggregation: SUM(CASE WHEN status = 'Converted' THEN 1 ELSE 0 END).",
+    sql: `SELECT
+  ch.channel_name,
+  COUNT(l.lead_id) AS total_leads,
+  SUM(CASE WHEN l.status = 'Converted' THEN 1 ELSE 0 END) AS converted_leads,
+  ROUND(100.0 * SUM(CASE WHEN l.status = 'Converted' THEN 1 ELSE 0 END) / COUNT(l.lead_id), 1) AS conversion_pct
+FROM leads l
+JOIN channels ch ON l.source_channel_id = ch.channel_id
+GROUP BY ch.channel_name
+ORDER BY conversion_pct DESC;` },
+  { diff: 'intermediate', num: 15,
+    title: 'Email open rate by campaign',
+    desc: 'For each campaign with email sends, show campaign_name, total_sent, total_opens, and open_rate_pct (1 dec). Best open rate first.',
+    hint: 'JOIN email_sends to campaigns. SUM sent_count and opens, divide.',
+    sql: `SELECT
+  c.campaign_name,
+  SUM(e.sent_count) AS total_sent,
+  SUM(e.opens) AS total_opens,
+  ROUND(100.0 * SUM(e.opens) / SUM(e.sent_count), 1) AS open_rate_pct
+FROM email_sends e
+JOIN campaigns c ON e.campaign_id = c.campaign_id
+GROUP BY c.campaign_id, c.campaign_name
+ORDER BY open_rate_pct DESC;` },
+  { diff: 'intermediate', num: 16,
+    title: 'Click-through rate by campaign',
+    desc: 'For each campaign with ad spend, calculate CTR (clicks / impressions). Show campaign_name, total_impressions, total_clicks, ctr_pct (2 dec). Best first.',
+    hint: 'JOIN ad_spend to campaigns. SUM clicks / SUM impressions × 100.',
+    sql: `SELECT
+  c.campaign_name,
+  SUM(a.impressions) AS total_impressions,
+  SUM(a.clicks) AS total_clicks,
+  ROUND(100.0 * SUM(a.clicks) / SUM(a.impressions), 2) AS ctr_pct
+FROM ad_spend a
+JOIN campaigns c ON a.campaign_id = c.campaign_id
+GROUP BY c.campaign_id, c.campaign_name
+ORDER BY ctr_pct DESC;` },
+  { diff: 'intermediate', num: 17,
+    title: 'Lead status distribution by channel',
+    desc: 'Show count of leads in each status per channel. Output channel_name, status, and lead_count. Order by channel_name then status.',
+    hint: 'GROUP BY two columns.',
+    sql: `SELECT
+  ch.channel_name,
+  l.status,
+  COUNT(*) AS lead_count
+FROM leads l
+JOIN channels ch ON l.source_channel_id = ch.channel_id
+GROUP BY ch.channel_name, l.status
+ORDER BY ch.channel_name, l.status;` },
+  { diff: 'intermediate', num: 18,
+    title: 'Monthly lead volume trend',
+    desc: 'Show how many leads were created each month. Output month (YYYY-MM) and lead_count, chronological.',
+    hint: "GROUP BY strftime('%Y-%m', created_date).",
+    sql: `SELECT
+  strftime('%Y-%m', created_date) AS month,
+  COUNT(*) AS lead_count
+FROM leads
+GROUP BY month
+ORDER BY month;` },
+  { diff: 'intermediate', num: 19,
+    title: 'Average lead score by channel',
+    desc: 'What is the average lead_score by source channel? Show channel_name and avg_score (1 dec). Highest first.',
+    hint: 'AVG(lead_score), GROUP BY channel.',
+    sql: `SELECT
+  ch.channel_name,
+  ROUND(AVG(l.lead_score), 1) AS avg_score
+FROM leads l
+JOIN channels ch ON l.source_channel_id = ch.channel_id
+GROUP BY ch.channel_name
+ORDER BY avg_score DESC;` },
+  { diff: 'intermediate', num: 20,
+    title: 'Revenue by campaign',
+    desc: 'Total revenue attributable to each campaign (from conversions). Show campaign_name and total_revenue (2 dec). Top earners first.',
+    hint: 'JOIN conversions to campaigns. SUM revenue.',
+    sql: `SELECT
+  c.campaign_name,
+  ROUND(SUM(co.revenue), 2) AS total_revenue
+FROM conversions co
+JOIN campaigns c ON co.campaign_id = c.campaign_id
+GROUP BY c.campaign_id, c.campaign_name
+ORDER BY total_revenue DESC;` },
+
+  // ---------- ADVANCED ----------
+  { diff: 'advanced', num: 21,
+    title: 'ROI by channel',
+    desc: 'Return on investment per channel: total conversion revenue / total ad spend. Show channel_name, total_revenue (2 dec), total_spend (2 dec), and roi (2 dec). Best ROI first. Only channels with ad spend.',
+    hint: 'Two CTEs (spend by channel, revenue by channel). LEFT JOIN so channels with no revenue still appear (ROI = 0).',
+    sql: `WITH spend_by_channel AS (
+  SELECT ch.channel_id, ch.channel_name, SUM(a.amount) AS total_spend
+  FROM ad_spend a
+  JOIN campaigns c ON a.campaign_id = c.campaign_id
+  JOIN channels ch ON c.channel_id = ch.channel_id
+  GROUP BY ch.channel_id, ch.channel_name
+),
+revenue_by_channel AS (
+  SELECT ch.channel_id, SUM(co.revenue) AS total_revenue
+  FROM conversions co
+  JOIN campaigns c ON co.campaign_id = c.campaign_id
+  JOIN channels ch ON c.channel_id = ch.channel_id
+  GROUP BY ch.channel_id
+)
+SELECT
+  s.channel_name,
+  ROUND(COALESCE(r.total_revenue, 0), 2) AS total_revenue,
+  ROUND(s.total_spend, 2) AS total_spend,
+  ROUND(COALESCE(r.total_revenue, 0) / s.total_spend, 2) AS roi
+FROM spend_by_channel s
+LEFT JOIN revenue_by_channel r ON s.channel_id = r.channel_id
+ORDER BY roi DESC;` },
+  { diff: 'advanced', num: 22,
+    title: 'Customer Acquisition Cost (CAC) by channel',
+    desc: 'CAC = total spend / customers acquired. Show channel_name, customers_acquired, total_spend (2 dec), and cac (2 dec). Lowest CAC first. Only channels with both spend and acquired customers.',
+    hint: 'CTE for customers by acquisition_channel_id; CTE for spend by channel. JOIN, divide.',
+    sql: `WITH spend_by_channel AS (
+  SELECT ch.channel_id, ch.channel_name, SUM(a.amount) AS total_spend
+  FROM ad_spend a
+  JOIN campaigns c ON a.campaign_id = c.campaign_id
+  JOIN channels ch ON c.channel_id = ch.channel_id
+  GROUP BY ch.channel_id, ch.channel_name
+),
+customers_by_channel AS (
+  SELECT acquisition_channel_id, COUNT(*) AS customers_acquired
+  FROM customers
+  GROUP BY acquisition_channel_id
+)
+SELECT
+  s.channel_name,
+  cb.customers_acquired,
+  ROUND(s.total_spend, 2) AS total_spend,
+  ROUND(s.total_spend / cb.customers_acquired, 2) AS cac
+FROM spend_by_channel s
+JOIN customers_by_channel cb ON s.channel_id = cb.acquisition_channel_id
+ORDER BY cac;` },
+  { diff: 'advanced', num: 23,
+    title: 'Full lead funnel',
+    desc: 'Count of leads at each status, ordered in funnel sequence: New → Nurturing → Qualified → Converted → Lost. Show status and lead_count.',
+    hint: 'GROUP BY status. ORDER BY a CASE expression to enforce funnel order.',
+    sql: `SELECT
+  status,
+  COUNT(*) AS lead_count
+FROM leads
+GROUP BY status
+ORDER BY CASE status
+  WHEN 'New' THEN 1
+  WHEN 'Nurturing' THEN 2
+  WHEN 'Qualified' THEN 3
+  WHEN 'Converted' THEN 4
+  WHEN 'Lost' THEN 5
+END;` },
+  { diff: 'advanced', num: 24,
+    title: 'Lifetime value by acquisition channel',
+    desc: 'Show channel_name, customer_count, avg_ltv (2 dec), total_ltv (2 dec) per acquisition channel. Highest avg first.',
+    hint: 'JOIN customers to channels on acquisition_channel_id. AVG and SUM lifetime_value.',
+    sql: `SELECT
+  ch.channel_name,
+  COUNT(c.customer_id) AS customer_count,
+  ROUND(AVG(c.lifetime_value), 2) AS avg_ltv,
+  ROUND(SUM(c.lifetime_value), 2) AS total_ltv
+FROM customers c
+JOIN channels ch ON c.acquisition_channel_id = ch.channel_id
+GROUP BY ch.channel_name
+ORDER BY avg_ltv DESC;` },
+  { diff: 'advanced', num: 25,
+    title: 'Rank campaigns within their channel by revenue',
+    desc: 'Within each channel, rank campaigns by total revenue. Show channel_name, campaign_name, total_revenue (2 dec), channel_rank (1 = highest).',
+    hint: 'CTE for per-campaign revenue with channel name. Then RANK() OVER (PARTITION BY channel ORDER BY revenue DESC).',
+    sql: `WITH campaign_revenue AS (
+  SELECT
+    ch.channel_name,
+    c.campaign_id,
+    c.campaign_name,
+    SUM(co.revenue) AS total_revenue
+  FROM conversions co
+  JOIN campaigns c ON co.campaign_id = c.campaign_id
+  JOIN channels ch ON c.channel_id = ch.channel_id
+  GROUP BY ch.channel_name, c.campaign_id, c.campaign_name
+)
+SELECT
+  channel_name,
+  campaign_name,
+  ROUND(total_revenue, 2) AS total_revenue,
+  RANK() OVER (PARTITION BY channel_name ORDER BY total_revenue DESC) AS channel_rank
+FROM campaign_revenue
+ORDER BY channel_name, channel_rank;` },
+  { diff: 'advanced', num: 26,
+    title: 'Average days from lead to conversion',
+    desc: 'For customers from a known lead, compute the average number of days from lead creation to customer conversion, grouped by acquisition channel. Show channel_name and avg_days_to_convert (1 dec). Fastest channels first.',
+    hint: 'JOIN customers → leads → channels. julianday(conversion_date) - julianday(created_date).',
+    sql: `SELECT
+  ch.channel_name,
+  ROUND(AVG(julianday(c.conversion_date) - julianday(l.created_date)), 1) AS avg_days_to_convert
+FROM customers c
+JOIN leads l ON c.lead_id = l.lead_id
+JOIN channels ch ON c.acquisition_channel_id = ch.channel_id
+GROUP BY ch.channel_name
+ORDER BY avg_days_to_convert;` },
+  { diff: 'advanced', num: 27,
+    title: 'Channels above the overall conversion rate',
+    desc: 'List channels whose conversion rate exceeds the overall conversion rate. Show channel_name, channel_conv_pct (1 dec), and overall_conv_pct (1 dec). Highest channel rate first.',
+    hint: 'Compute overall pct in a scalar CTE. HAVING per-channel pct > overall pct.',
+    sql: `WITH overall AS (
+  SELECT 100.0 * SUM(CASE WHEN status = 'Converted' THEN 1 ELSE 0 END) / COUNT(*) AS pct
+  FROM leads
+)
+SELECT
+  ch.channel_name,
+  ROUND(100.0 * SUM(CASE WHEN l.status = 'Converted' THEN 1 ELSE 0 END) / COUNT(*), 1) AS channel_conv_pct,
+  ROUND((SELECT pct FROM overall), 1) AS overall_conv_pct
+FROM leads l
+JOIN channels ch ON l.source_channel_id = ch.channel_id
+GROUP BY ch.channel_name
+HAVING 100.0 * SUM(CASE WHEN l.status = 'Converted' THEN 1 ELSE 0 END) / COUNT(*) > (SELECT pct FROM overall)
+ORDER BY channel_conv_pct DESC;` },
+  { diff: 'advanced', num: 28,
+    title: 'Monthly ad spend trend with cumulative total',
+    desc: 'Total ad spend by month, plus a running cumulative total. Output month (YYYY-MM), monthly_spend (2 dec), cumulative_spend (2 dec). Chronological.',
+    hint: 'GROUP by month. Then window SUM() OVER (ORDER BY month) for cumulative.',
+    sql: `WITH monthly AS (
+  SELECT
+    strftime('%Y-%m', spend_date) AS month,
+    SUM(amount) AS monthly_spend
+  FROM ad_spend
+  GROUP BY month
+)
+SELECT
+  month,
+  ROUND(monthly_spend, 2) AS monthly_spend,
+  ROUND(SUM(monthly_spend) OVER (ORDER BY month), 2) AS cumulative_spend
+FROM monthly
+ORDER BY month;` },
+  { diff: 'advanced', num: 29,
+    title: 'Pareto — top 20% of customers by LTV',
+    desc: 'Identify customers in the top quintile by lifetime_value. Show customer_id, segment, lifetime_value (2 dec), and pct_of_total_ltv (2 dec). Highest first.',
+    hint: 'NTILE(5) for quintile. SUM() OVER () for total.',
+    sql: `WITH ranked AS (
+  SELECT
+    customer_id,
+    segment,
+    lifetime_value,
+    NTILE(5) OVER (ORDER BY lifetime_value DESC) AS quintile,
+    SUM(lifetime_value) OVER () AS total_ltv
+  FROM customers
+)
+SELECT
+  customer_id,
+  segment,
+  ROUND(lifetime_value, 2) AS lifetime_value,
+  ROUND(100.0 * lifetime_value / total_ltv, 2) AS pct_of_total_ltv
+FROM ranked
+WHERE quintile = 1
+ORDER BY lifetime_value DESC;` },
+  { diff: 'advanced', num: 30,
+    title: 'Monthly email engagement trend',
+    desc: 'Track email engagement by month. Show month, sent, opens, clicks, open_rate_pct (1 dec), click_rate_pct (1 dec). Chronological.',
+    hint: "GROUP BY strftime('%Y-%m', send_date). Compute rates from SUMs.",
+    sql: `SELECT
+  strftime('%Y-%m', send_date) AS month,
+  SUM(sent_count) AS sent,
+  SUM(opens) AS opens,
+  SUM(clicks) AS clicks,
+  ROUND(100.0 * SUM(opens) / SUM(sent_count), 1) AS open_rate_pct,
+  ROUND(100.0 * SUM(clicks) / SUM(sent_count), 1) AS click_rate_pct
+FROM email_sends
+GROUP BY month
+ORDER BY month;` },
+];
+
+function highlightSql(sql) {
+  // simple keyword highlighter for the solution block
+  const keywords = /\b(SELECT|FROM|WHERE|JOIN|LEFT|RIGHT|INNER|OUTER|ON|AND|OR|NOT|IN|IS|NULL|AS|GROUP|BY|HAVING|ORDER|ASC|DESC|LIMIT|CASE|WHEN|THEN|ELSE|END|WITH|UNION|INSERT|UPDATE|DELETE|CREATE|TABLE|VIEW|DISTINCT|COUNT|SUM|AVG|MIN|MAX|ROUND|CAST|INTEGER|RANK|DENSE_RANK|ROW_NUMBER|OVER|PARTITION|BETWEEN)\b/g;
+  const escaped = sql.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  let html = escaped;
+  // strings (single-quoted)
+  html = html.replace(/'([^']*)'/g, '<span class="sql-str">\'$1\'</span>');
+  // comments -- to end of line
+  html = html.replace(/(--[^\n]*)/g, '<span class="sql-cmt">$1</span>');
+  // keywords (skip inside string spans by being naive — order matters)
+  html = html.replace(keywords, '<span class="sql-kw">$1</span>');
+  // numbers
+  html = html.replace(/\b(\d+(\.\d+)?)\b/g, '<span class="sql-num">$1</span>');
+  return html;
+}
+
+function renderPracticeProblems() {
+  const container = document.getElementById('practice-list');
+  const groups = {
+    beginner:     { label: 'Beginner', desc: 'SELECT · WHERE · ORDER BY · LIMIT', items: [] },
+    intermediate: { label: 'Intermediate', desc: 'JOINs · GROUP BY · Aggregation · HAVING', items: [] },
+    advanced:     { label: 'Advanced', desc: 'Window functions · CTEs · Self-joins · Date math', items: [] },
+  };
+  const problems = currentModule().problems;
+  for (const p of problems) groups[p.diff].items.push(p);
+
+  container.innerHTML = '';
+  for (const [key, g] of Object.entries(groups)) {
+    const section = document.createElement('div');
+    section.className = 'difficulty-group';
+    section.innerHTML = `
+      <div class="difficulty-label ${key}">
+        <strong>${g.label}</strong>
+        <span class="dl-tag">·</span>
+        <span>${g.desc}</span>
+      </div>
+      ${g.items.map(p => {
+        const s = getProblemStatus(currentModuleKey, p.num);
+        return `
+        <div class="problem" data-num="${p.num}">
+          <div class="prob-head">
+            <span class="prob-num">${String(p.num).padStart(2,'0')}</span>
+            <span class="prob-title">${p.title}</span>
+            <span class="prob-status ${s || ''}">${s ? '\u2713' : ''}</span>
+            <span class="prob-toggle">+</span>
+          </div>
+          <div class="prob-body">
+            <div class="prob-desc">${p.desc}</div>
+            <div class="prob-tools">
+              <button class="btn ghost" data-action="hint">Show Hint</button>
+              <button class="btn ghost" data-action="solution">Show Solution</button>
+              <button class="btn" data-action="load">Load into Editor →</button>
+            </div>
+            <div class="prob-section" data-section="hint">
+              <div class="prob-section-label">Hint</div>
+              <div class="prob-hint">${p.hint}</div>
+            </div>
+            <div class="prob-section" data-section="solution">
+              <div class="prob-section-label">Solution</div>
+              <pre class="prob-solution">${highlightSql(p.sql)}</pre>
+            </div>
+          </div>
+        </div>
+      `;
+      }).join('')}
+    `;
+    container.appendChild(section);
+  }
+
+  // Attach the click handler only once across re-renders
+  if (container.dataset.handlerAttached) return;
+  container.dataset.handlerAttached = 'true';
+
+  container.addEventListener('click', e => {
+    const head = e.target.closest('.prob-head');
+    if (head) {
+      head.parentElement.classList.toggle('open');
+      return;
+    }
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const problem = btn.closest('.problem');
+    const num = parseInt(problem.dataset.num);
+    const p = currentModule().problems.find(x => x.num === num);
+    const action = btn.dataset.action;
+
+    if (action === 'hint' || action === 'solution') {
+      const section = problem.querySelector(`[data-section="${action}"]`);
+      const isOpen = section.classList.toggle('open');
+      btn.textContent = (isOpen ? 'Hide ' : 'Show ') + action.charAt(0).toUpperCase() + action.slice(1);
+    } else if (action === 'load') {
+      loadProblem(p);
+    }
+  });
+}
+
+/* ============================================================
+   TAB SWITCHING
+   ============================================================ */
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'query' && cmEditor) {
+      setTimeout(() => cmEditor.refresh(), 10);
+    }
+  });
+});
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+initDatabase();
+</script>
+</body>
+</html>
