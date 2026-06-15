@@ -1261,6 +1261,196 @@
     color: var(--orange);
   }
 
+
+  /* ============ SQL REFERENCE (DOCS) TAB ============ */
+  .docs-layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+  .docs-nav {
+    position: sticky;
+    top: 16px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 8px 0;
+  }
+  .docs-nav-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-3);
+    padding: 8px 16px 6px;
+  }
+  .docs-nav a {
+    display: block;
+    padding: 5px 16px;
+    font-size: 13px;
+    color: var(--ink-2);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    transition: background 0.1s, color 0.1s, border-color 0.1s;
+  }
+  .docs-nav a:hover { background: var(--surface-2); color: var(--ink); }
+  .docs-nav a.active {
+    color: var(--blue);
+    border-left-color: var(--blue);
+    background: var(--blue-tint);
+    font-weight: 500;
+  }
+  .docs-content {
+    min-width: 0;
+    max-width: 820px;
+  }
+  .docs-content > p.docs-lead {
+    font-size: 14.5px;
+    line-height: 1.65;
+    color: var(--ink-2);
+    margin-bottom: 26px;
+  }
+  .docs-section {
+    margin-bottom: 38px;
+    scroll-margin-top: 16px;
+  }
+  .docs-section h2 {
+    font-size: 21px;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 0 0 6px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+    letter-spacing: -0.01em;
+  }
+  .docs-section h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 22px 0 8px;
+  }
+  .docs-section p {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--ink-2);
+    margin: 0 0 12px;
+  }
+  .docs-section p strong { color: var(--ink); font-weight: 600; }
+  .docs-section ul { margin: 0 0 14px; padding-left: 20px; }
+  .docs-section ul li {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--ink-2);
+    margin-bottom: 3px;
+  }
+  .docs-section code, .docs-content code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 1px 6px;
+    color: var(--yellow);
+  }
+  .docs-code {
+    background: var(--bg);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    padding: 14px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre;
+    margin: 0 0 16px;
+  }
+  .docs-code .sql-kw { color: #cc7832; font-weight: 600; }
+  .docs-code .sql-str { color: #6a8759; }
+  .docs-code .sql-num { color: #6897bb; }
+  .docs-code .sql-cmt { color: #808080; font-style: italic; }
+  [data-theme="light"] .docs-code .sql-kw  { color: #b85a1d; }
+  [data-theme="light"] .docs-code .sql-str { color: #3a8c47; }
+  [data-theme="light"] .docs-code .sql-num { color: #2563cc; }
+  [data-theme="light"] .docs-code .sql-cmt { color: #8a8377; }
+  .docs-callout {
+    background: var(--blue-tint);
+    border: 1px solid rgba(53, 116, 240, 0.25);
+    border-left: 3px solid var(--blue);
+    border-radius: var(--r-sm);
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--ink-2);
+    margin: 0 0 16px;
+  }
+  .docs-callout strong { color: var(--ink); }
+  .docs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 0 0 16px;
+  }
+  .docs-table th, .docs-table td {
+    text-align: left;
+    padding: 7px 12px;
+    border: 1px solid var(--line);
+    color: var(--ink-2);
+    vertical-align: top;
+  }
+  .docs-table th {
+    background: var(--surface-2);
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .docs-table td code { white-space: nowrap; }
+
+  /* --- Resizable editor wrapper --- */
+  .editor-cm-wrap {
+    position: relative;
+    height: 240px;
+    min-height: 120px;
+    overflow: hidden;
+    resize: vertical;
+  }
+  .editor-cm-wrap .CodeMirror { height: 100%; }
+  .editor-cm-wrap::after {
+    content: "";
+    position: absolute;
+    right: 2px;
+    bottom: 2px;
+    width: 12px;
+    height: 12px;
+    pointer-events: none;
+    background:
+      linear-gradient(135deg, transparent 0 50%, var(--ink-4) 50% 60%, transparent 60% 70%, var(--ink-4) 70% 80%, transparent 80%);
+    opacity: 0.8;
+  }
+
+  /* --- Problem prev/next nav buttons --- */
+  .pi-nav {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--blue);
+    font-size: 17px;
+    line-height: 1;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--r-sm);
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s, color 0.12s;
+  }
+  .pi-nav:hover:not(:disabled) { background: rgba(53, 116, 240, 0.18); }
+  .pi-nav:disabled { color: var(--ink-4); opacity: 0.5; cursor: not-allowed; }
+
   /* ===== responsive ===== */
   @media (max-width: 960px) {
     .query-layout {
@@ -1332,6 +1522,22 @@
     .prob-title { font-size: 13.5px; }
     .prob-head { padding: 10px 12px; gap: 10px; }
   }
+
+  @media (max-width: 880px) {
+    .docs-layout { grid-template-columns: 1fr; gap: 16px; }
+    .docs-nav {
+      position: static;
+      max-height: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px;
+      padding: 8px;
+    }
+    .docs-nav-title { width: 100%; }
+    .docs-nav a { border-left: none; border-radius: var(--r-sm); padding: 5px 10px; }
+    .docs-nav a.active { border-left: none; }
+  }
+
 </style>
 </head>
 <body>
@@ -1373,7 +1579,8 @@
   <button class="tab active" data-tab="schema"><span class="num">01</span>Schema &amp; Data</button>
   <button class="tab" data-tab="query"><span class="num">02</span>Query Editor</button>
   <button class="tab" data-tab="practice"><span class="num">03</span>Practice Problems</button>
-  <button class="tab" data-tab="about"><span class="num">04</span>About</button>
+  <button class="tab" data-tab="docs"><span class="num">04</span>SQL Reference</button>
+  <button class="tab" data-tab="about"><span class="num">05</span>About</button>
 </nav>
 
 <!-- ============ SCHEMA PANEL ============ -->
@@ -1406,9 +1613,11 @@
             <option value="">Load problem…</option>
           </select>
           <div class="problem-indicator" id="problem-indicator" hidden>
+            <button class="pi-nav" id="pi-prev" title="Previous problem">‹</button>
             <span class="pi-label">Working on</span>
             <span class="pi-num" id="pi-num"></span>
             <span class="pi-title" id="pi-title"></span>
+            <button class="pi-nav" id="pi-next" title="Next problem">›</button>
             <button class="pi-close" id="pi-close" title="Stop working on this problem">×</button>
           </div>
         </div>
@@ -1419,7 +1628,7 @@
           <button class="btn" id="btn-run">Run<span class="shortcut">⌘↵</span></button>
         </div>
       </div>
-      <textarea id="editor"></textarea>
+      <div class="editor-cm-wrap" id="editor-cm-wrap"><textarea id="editor"></textarea></div>
     </div>
     <div class="results-panel">
       <div class="results-head">
@@ -1440,6 +1649,307 @@
     Thirty problems per role, organized by difficulty. Each one mirrors a question an analyst gets asked in real life. Click <em>Load into Editor</em> (or use the dropdown in the Query tab), write your query, then hit <em>Check Answer</em> — it compares your output against the expected result and tells you what's off. Completed problems get a green check, attempted ones get yellow.
   </p>
   <div id="practice-list"></div>
+</section>
+
+<!-- ============ SQL REFERENCE (DOCS) PANEL ============ -->
+<section class="panel" id="panel-docs">
+  <div class="docs-layout">
+    <nav class="docs-nav" id="docs-nav">
+      <div class="docs-nav-title">SQL Reference</div>
+      <a href="#doc-intro">Introduction</a>
+      <a href="#doc-select">SELECT &amp; FROM</a>
+      <a href="#doc-where">WHERE &amp; operators</a>
+      <a href="#doc-order">ORDER BY &amp; LIMIT</a>
+      <a href="#doc-distinct">DISTINCT</a>
+      <a href="#doc-aggregates">Aggregate functions</a>
+      <a href="#doc-groupby">GROUP BY &amp; HAVING</a>
+      <a href="#doc-joins">JOINs</a>
+      <a href="#doc-subqueries">Subqueries</a>
+      <a href="#doc-cte">CTEs (WITH)</a>
+      <a href="#doc-window">Window functions</a>
+      <a href="#doc-case">CASE expressions</a>
+      <a href="#doc-null">NULL handling</a>
+      <a href="#doc-string">String functions</a>
+      <a href="#doc-date">Date &amp; time</a>
+      <a href="#doc-cast">CAST &amp; types</a>
+      <a href="#doc-dialect">SQLite vs MySQL</a>
+    </nav>
+
+    <div class="docs-content">
+      <p class="docs-lead">
+        A practical reference for the SQL you will use across the practice problems. Everything here runs on the in-browser SQLite engine &mdash; copy any example into the <em>Query Editor</em> and hit Run to see it work against the live data.
+      </p>
+
+      <div class="docs-section" id="doc-intro">
+        <h2>Introduction</h2>
+        <p>
+          SQL (Structured Query Language) is how you ask a relational database questions. A query reads from one or more <strong>tables</strong> &mdash; grids of rows and columns &mdash; and returns a result set. You describe <em>what</em> you want; the engine figures out <em>how</em> to get it.
+        </p>
+        <p>The clauses of a <code>SELECT</code> statement are always written in this order:</p>
+        <pre class="docs-code"><span class="sql-kw">SELECT</span>   columns
+<span class="sql-kw">FROM</span>     table
+<span class="sql-kw">WHERE</span>    row filter
+<span class="sql-kw">GROUP BY</span> grouping
+<span class="sql-kw">HAVING</span>   group filter
+<span class="sql-kw">ORDER BY</span> sort
+<span class="sql-kw">LIMIT</span>    row cap</pre>
+        <p>But they are <em>evaluated</em> in a different order: <code>FROM</code> &rarr; <code>WHERE</code> &rarr; <code>GROUP BY</code> &rarr; <code>HAVING</code> &rarr; <code>SELECT</code> &rarr; <code>ORDER BY</code> &rarr; <code>LIMIT</code>. That is why a column alias created in <code>SELECT</code> can be used in <code>ORDER BY</code> but not in <code>WHERE</code>.</p>
+      </div>
+
+      <div class="docs-section" id="doc-select">
+        <h2>SELECT &amp; FROM</h2>
+        <p><code>SELECT</code> chooses the columns to return; <code>FROM</code> names the table. Use <code>*</code> for every column, or list them to control the order and naming.</p>
+        <pre class="docs-code"><span class="sql-cmt">-- every column</span>
+<span class="sql-kw">SELECT</span> * <span class="sql-kw">FROM</span> patients;
+
+<span class="sql-cmt">-- specific columns, with an alias</span>
+<span class="sql-kw">SELECT</span> first_name, last_name, birth_date <span class="sql-kw">AS</span> dob
+<span class="sql-kw">FROM</span> patients;</pre>
+        <h3>Column aliases &amp; computed columns</h3>
+        <p>Use <code>AS</code> to rename a column in the output, and you can compute new values inline.</p>
+        <pre class="docs-code"><span class="sql-kw">SELECT</span> first_name || <span class="sql-str">' '</span> || last_name <span class="sql-kw">AS</span> full_name,
+       2025 - <span class="sql-kw">CAST</span>(strftime(<span class="sql-str">'%Y'</span>, birth_date) <span class="sql-kw">AS</span> <span class="sql-kw">INTEGER</span>) <span class="sql-kw">AS</span> approx_age
+<span class="sql-kw">FROM</span> patients;</pre>
+      </div>
+
+      <div class="docs-section" id="doc-where">
+        <h2>WHERE &amp; operators</h2>
+        <p><code>WHERE</code> keeps only the rows that match a condition. Combine conditions with <code>AND</code>, <code>OR</code>, and <code>NOT</code>.</p>
+        <pre class="docs-code"><span class="sql-kw">SELECT</span> * <span class="sql-kw">FROM</span> encounters
+<span class="sql-kw">WHERE</span> encounter_type = <span class="sql-str">'Inpatient'</span>
+  <span class="sql-kw">AND</span> length_of_stay &gt;= 3;</pre>
+        <table class="docs-table">
+          <tr><th>Operator</th><th>Meaning</th><th>Example</th></tr>
+          <tr><td><code>= &nbsp; != &nbsp; &lt;&gt;</code></td><td>equal / not equal</td><td><code>status = 'Active'</code></td></tr>
+          <tr><td><code>&lt; &nbsp; &lt;= &nbsp; &gt; &nbsp; &gt;=</code></td><td>comparison</td><td><code>amount &gt; 500</code></td></tr>
+          <tr><td><code>BETWEEN a AND b</code></td><td>inclusive range</td><td><code>age BETWEEN 18 AND 65</code></td></tr>
+          <tr><td><code>IN (...)</code></td><td>matches any in a list</td><td><code>state IN ('CA','NY')</code></td></tr>
+          <tr><td><code>LIKE</code></td><td>pattern match (<code>%</code>=any, <code>_</code>=one char)</td><td><code>name LIKE 'Sm%'</code></td></tr>
+          <tr><td><code>IS NULL / IS NOT NULL</code></td><td>test for missing values</td><td><code>discharge_date IS NULL</code></td></tr>
+        </table>
+        <div class="docs-callout"><strong>NULL is not a value.</strong> Comparisons like <code>x = NULL</code> are never true &mdash; always use <code>IS NULL</code> / <code>IS NOT NULL</code>.</div>
+      </div>
+
+      <div class="docs-section" id="doc-order">
+        <h2>ORDER BY &amp; LIMIT</h2>
+        <p><code>ORDER BY</code> sorts the result; add <code>DESC</code> for descending (default is <code>ASC</code>). <code>LIMIT</code> caps the number of rows &mdash; handy for "top N" questions.</p>
+        <pre class="docs-code"><span class="sql-cmt">-- 10 most expensive claims</span>
+<span class="sql-kw">SELECT</span> claim_id, amount
+<span class="sql-kw">FROM</span> claims
+<span class="sql-kw">ORDER BY</span> amount <span class="sql-kw">DESC</span>
+<span class="sql-kw">LIMIT</span> 10;
+
+<span class="sql-cmt">-- sort by two keys</span>
+<span class="sql-kw">SELECT</span> * <span class="sql-kw">FROM</span> patients
+<span class="sql-kw">ORDER BY</span> state <span class="sql-kw">ASC</span>, last_name <span class="sql-kw">ASC</span>;</pre>
+      </div>
+
+      <div class="docs-section" id="doc-distinct">
+        <h2>DISTINCT</h2>
+        <p><code>DISTINCT</code> removes duplicate rows from the result &mdash; useful to list the unique values in a column.</p>
+        <pre class="docs-code"><span class="sql-kw">SELECT DISTINCT</span> department <span class="sql-kw">FROM</span> providers;
+
+<span class="sql-cmt">-- count the distinct values</span>
+<span class="sql-kw">SELECT COUNT</span>(<span class="sql-kw">DISTINCT</span> department) <span class="sql-kw">AS</span> n_departments
+<span class="sql-kw">FROM</span> providers;</pre>
+      </div>
+
+      <div class="docs-section" id="doc-aggregates">
+        <h2>Aggregate functions</h2>
+        <p>Aggregates collapse many rows into a single summary value.</p>
+        <table class="docs-table">
+          <tr><th>Function</th><th>Returns</th></tr>
+          <tr><td><code>COUNT(*)</code></td><td>number of rows</td></tr>
+          <tr><td><code>COUNT(col)</code></td><td>non-NULL values in <code>col</code></td></tr>
+          <tr><td><code>SUM(col)</code></td><td>total</td></tr>
+          <tr><td><code>AVG(col)</code></td><td>mean</td></tr>
+          <tr><td><code>MIN(col) / MAX(col)</code></td><td>smallest / largest</td></tr>
+        </table>
+        <pre class="docs-code"><span class="sql-kw">SELECT COUNT</span>(*)        <span class="sql-kw">AS</span> n_claims,
+       <span class="sql-kw">SUM</span>(amount)      <span class="sql-kw">AS</span> total_billed,
+       <span class="sql-kw">ROUND</span>(<span class="sql-kw">AVG</span>(amount), 2) <span class="sql-kw">AS</span> avg_claim
+<span class="sql-kw">FROM</span> claims;</pre>
+      </div>
+
+      <div class="docs-section" id="doc-groupby">
+        <h2>GROUP BY &amp; HAVING</h2>
+        <p><code>GROUP BY</code> splits rows into groups so an aggregate is computed per group rather than over the whole table. <code>HAVING</code> filters the <em>groups</em> after aggregation (where <code>WHERE</code> filters rows before).</p>
+        <pre class="docs-code"><span class="sql-cmt">-- claims per payer, only payers with &gt; 100 claims</span>
+<span class="sql-kw">SELECT</span> payer_name,
+       <span class="sql-kw">COUNT</span>(*)   <span class="sql-kw">AS</span> n_claims,
+       <span class="sql-kw">SUM</span>(amount) <span class="sql-kw">AS</span> total
+<span class="sql-kw">FROM</span> claims
+<span class="sql-kw">GROUP BY</span> payer_name
+<span class="sql-kw">HAVING</span> <span class="sql-kw">COUNT</span>(*) &gt; 100
+<span class="sql-kw">ORDER BY</span> total <span class="sql-kw">DESC</span>;</pre>
+        <div class="docs-callout"><strong>Rule of thumb:</strong> every column in the <code>SELECT</code> list must either be inside an aggregate or appear in the <code>GROUP BY</code>.</div>
+      </div>
+
+      <div class="docs-section" id="doc-joins">
+        <h2>JOINs</h2>
+        <p>A join combines rows from two tables on a matching key (usually a primary key / foreign key pair).</p>
+        <ul>
+          <li><strong>INNER JOIN</strong> &mdash; only rows that match in both tables.</li>
+          <li><strong>LEFT JOIN</strong> &mdash; all rows from the left table, plus matches from the right (NULLs where none).</li>
+          <li><strong>Self-join</strong> &mdash; a table joined to itself, using aliases.</li>
+        </ul>
+        <pre class="docs-code"><span class="sql-cmt">-- encounters with the provider's name</span>
+<span class="sql-kw">SELECT</span> e.encounter_id, p.first_name, p.last_name
+<span class="sql-kw">FROM</span> encounters e
+<span class="sql-kw">JOIN</span> providers p <span class="sql-kw">ON</span> e.provider_id = p.provider_id;
+
+<span class="sql-cmt">-- patients with no encounters (LEFT JOIN + IS NULL)</span>
+<span class="sql-kw">SELECT</span> pt.patient_id
+<span class="sql-kw">FROM</span> patients pt
+<span class="sql-kw">LEFT JOIN</span> encounters e <span class="sql-kw">ON</span> e.patient_id = pt.patient_id
+<span class="sql-kw">WHERE</span> e.encounter_id <span class="sql-kw">IS NULL</span>;</pre>
+      </div>
+
+      <div class="docs-section" id="doc-subqueries">
+        <h2>Subqueries</h2>
+        <p>A subquery is a query nested inside another. It can return a single value, a list (for <code>IN</code>), or a derived table in the <code>FROM</code> clause.</p>
+        <pre class="docs-code"><span class="sql-cmt">-- claims above the overall average</span>
+<span class="sql-kw">SELECT</span> claim_id, amount
+<span class="sql-kw">FROM</span> claims
+<span class="sql-kw">WHERE</span> amount &gt; (<span class="sql-kw">SELECT</span> <span class="sql-kw">AVG</span>(amount) <span class="sql-kw">FROM</span> claims);
+
+<span class="sql-cmt">-- correlated subquery: per-row comparison</span>
+<span class="sql-kw">SELECT</span> e.*
+<span class="sql-kw">FROM</span> encounters e
+<span class="sql-kw">WHERE</span> e.length_of_stay &gt; (
+  <span class="sql-kw">SELECT</span> <span class="sql-kw">AVG</span>(length_of_stay)
+  <span class="sql-kw">FROM</span> encounters x
+  <span class="sql-kw">WHERE</span> x.department = e.department
+);</pre>
+      </div>
+
+      <div class="docs-section" id="doc-cte">
+        <h2>CTEs (WITH)</h2>
+        <p>A Common Table Expression names a subquery up front so the main query reads top-to-bottom. Great for breaking a complex question into steps.</p>
+        <pre class="docs-code"><span class="sql-kw">WITH</span> dept_totals <span class="sql-kw">AS</span> (
+  <span class="sql-kw">SELECT</span> department, <span class="sql-kw">SUM</span>(amount) <span class="sql-kw">AS</span> total
+  <span class="sql-kw">FROM</span> claims
+  <span class="sql-kw">GROUP BY</span> department
+)
+<span class="sql-kw">SELECT</span> department, total
+<span class="sql-kw">FROM</span> dept_totals
+<span class="sql-kw">WHERE</span> total &gt; 1000000
+<span class="sql-kw">ORDER BY</span> total <span class="sql-kw">DESC</span>;</pre>
+      </div>
+
+      <div class="docs-section" id="doc-window">
+        <h2>Window functions</h2>
+        <p>A window function computes a value across a set of rows <em>related to the current row</em>, without collapsing them the way <code>GROUP BY</code> does. The <code>OVER</code> clause defines the window.</p>
+        <pre class="docs-code"><span class="sql-cmt">-- rank providers by revenue within each department</span>
+<span class="sql-kw">SELECT</span> provider_id, department, revenue,
+       <span class="sql-kw">RANK</span>() <span class="sql-kw">OVER</span> (
+         <span class="sql-kw">PARTITION BY</span> department
+         <span class="sql-kw">ORDER BY</span> revenue <span class="sql-kw">DESC</span>
+       ) <span class="sql-kw">AS</span> rank_in_dept
+<span class="sql-kw">FROM</span> provider_revenue;</pre>
+        <table class="docs-table">
+          <tr><th>Function</th><th>Use</th></tr>
+          <tr><td><code>ROW_NUMBER()</code></td><td>unique sequential number per partition</td></tr>
+          <tr><td><code>RANK() / DENSE_RANK()</code></td><td>ranking with / without gaps on ties</td></tr>
+          <tr><td><code>NTILE(n)</code></td><td>split rows into <code>n</code> buckets (quartiles, deciles)</td></tr>
+          <tr><td><code>LAG(col) / LEAD(col)</code></td><td>value from the previous / next row</td></tr>
+          <tr><td><code>SUM(col) OVER (...)</code></td><td>running / windowed totals</td></tr>
+        </table>
+        <pre class="docs-code"><span class="sql-cmt">-- month-over-month change with LAG</span>
+<span class="sql-kw">SELECT</span> month, revenue,
+       revenue - <span class="sql-kw">LAG</span>(revenue) <span class="sql-kw">OVER</span> (<span class="sql-kw">ORDER BY</span> month) <span class="sql-kw">AS</span> mom_change
+<span class="sql-kw">FROM</span> monthly_revenue;</pre>
+      </div>
+
+      <div class="docs-section" id="doc-case">
+        <h2>CASE expressions</h2>
+        <p><code>CASE</code> is SQL's if/else &mdash; it returns a value based on conditions. Useful for bucketing and conditional aggregation.</p>
+        <pre class="docs-code"><span class="sql-kw">SELECT</span> patient_id,
+       <span class="sql-kw">CASE</span>
+         <span class="sql-kw">WHEN</span> age &lt; 18  <span class="sql-kw">THEN</span> <span class="sql-str">'Pediatric'</span>
+         <span class="sql-kw">WHEN</span> age &lt; 65  <span class="sql-kw">THEN</span> <span class="sql-str">'Adult'</span>
+         <span class="sql-kw">ELSE</span> <span class="sql-str">'Senior'</span>
+       <span class="sql-kw">END</span> <span class="sql-kw">AS</span> age_group
+<span class="sql-kw">FROM</span> patients;
+
+<span class="sql-cmt">-- conditional aggregation (pivot-style)</span>
+<span class="sql-kw">SELECT</span>
+  <span class="sql-kw">SUM</span>(<span class="sql-kw">CASE WHEN</span> status = <span class="sql-str">'Paid'</span> <span class="sql-kw">THEN</span> amount <span class="sql-kw">ELSE</span> 0 <span class="sql-kw">END</span>) <span class="sql-kw">AS</span> paid_total,
+  <span class="sql-kw">SUM</span>(<span class="sql-kw">CASE WHEN</span> status = <span class="sql-str">'Denied'</span> <span class="sql-kw">THEN</span> amount <span class="sql-kw">ELSE</span> 0 <span class="sql-kw">END</span>) <span class="sql-kw">AS</span> denied_total
+<span class="sql-kw">FROM</span> claims;</pre>
+      </div>
+
+      <div class="docs-section" id="doc-null">
+        <h2>NULL handling</h2>
+        <ul>
+          <li><code>COALESCE(a, b, ...)</code> &mdash; first non-NULL argument.</li>
+          <li><code>IFNULL(a, b)</code> &mdash; <code>b</code> if <code>a</code> is NULL (SQLite).</li>
+          <li><code>NULLIF(a, b)</code> &mdash; NULL if <code>a = b</code>, else <code>a</code> (guards divide-by-zero).</li>
+        </ul>
+        <pre class="docs-code"><span class="sql-kw">SELECT</span> <span class="sql-kw">COALESCE</span>(discharge_date, <span class="sql-str">'still admitted'</span>) <span class="sql-kw">AS</span> status,
+       amount / <span class="sql-kw">NULLIF</span>(visits, 0) <span class="sql-kw">AS</span> per_visit
+<span class="sql-kw">FROM</span> encounters;</pre>
+      </div>
+
+      <div class="docs-section" id="doc-string">
+        <h2>String functions</h2>
+        <table class="docs-table">
+          <tr><th>Function</th><th>Does</th></tr>
+          <tr><td><code>a || b</code></td><td>concatenate strings</td></tr>
+          <tr><td><code>LENGTH(s)</code></td><td>character count</td></tr>
+          <tr><td><code>UPPER(s) / LOWER(s)</code></td><td>change case</td></tr>
+          <tr><td><code>SUBSTR(s, start, len)</code></td><td>extract a substring (1-indexed)</td></tr>
+          <tr><td><code>REPLACE(s, find, with)</code></td><td>replace text</td></tr>
+          <tr><td><code>TRIM(s)</code></td><td>strip surrounding whitespace</td></tr>
+          <tr><td><code>INSTR(s, sub)</code></td><td>position of <code>sub</code> (0 if absent)</td></tr>
+        </table>
+        <pre class="docs-code"><span class="sql-kw">SELECT</span> <span class="sql-kw">UPPER</span>(<span class="sql-kw">SUBSTR</span>(last_name, 1, 1)) || <span class="sql-str">'.'</span> <span class="sql-kw">AS</span> initial,
+       <span class="sql-kw">LENGTH</span>(first_name) <span class="sql-kw">AS</span> name_len
+<span class="sql-kw">FROM</span> patients;</pre>
+      </div>
+
+      <div class="docs-section" id="doc-date">
+        <h2>Date &amp; time</h2>
+        <p>SQLite stores dates as text (<code>YYYY-MM-DD</code>). Use these helpers to compute with them.</p>
+        <ul>
+          <li><code>date('now')</code> &mdash; today's date.</li>
+          <li><code>date(d, '-30 days')</code> &mdash; date arithmetic (also <code>'+1 month'</code>, <code>'-1 year'</code>).</li>
+          <li><code>strftime('%Y', d)</code> &mdash; extract parts (<code>%Y</code> year, <code>%m</code> month, <code>%d</code> day).</li>
+          <li><code>julianday(a) - julianday(b)</code> &mdash; number of days between two dates.</li>
+        </ul>
+        <pre class="docs-code"><span class="sql-cmt">-- encounters in the last 30 days</span>
+<span class="sql-kw">SELECT</span> * <span class="sql-kw">FROM</span> encounters
+<span class="sql-kw">WHERE</span> encounter_date &gt;= date(<span class="sql-str">'now'</span>, <span class="sql-str">'-30 days'</span>);
+
+<span class="sql-cmt">-- length of stay in days</span>
+<span class="sql-kw">SELECT</span> encounter_id,
+       julianday(discharge_date) - julianday(admit_date) <span class="sql-kw">AS</span> los_days
+<span class="sql-kw">FROM</span> encounters;</pre>
+      </div>
+
+      <div class="docs-section" id="doc-cast">
+        <h2>CAST &amp; types</h2>
+        <p>SQLite is loosely typed, but <code>CAST</code> forces a conversion &mdash; commonly to avoid integer division or to compare text-stored numbers.</p>
+        <pre class="docs-code"><span class="sql-cmt">-- 7/2 is 3 (integer); force a decimal result</span>
+<span class="sql-kw">SELECT</span> <span class="sql-kw">CAST</span>(passed <span class="sql-kw">AS</span> <span class="sql-kw">REAL</span>) / total <span class="sql-kw">AS</span> pass_rate
+<span class="sql-kw">FROM</span> screenings;</pre>
+        <p>Common types: <code>INTEGER</code>, <code>REAL</code> (floating point), <code>TEXT</code>, <code>NUMERIC</code>.</p>
+      </div>
+
+      <div class="docs-section" id="doc-dialect">
+        <h2>SQLite vs MySQL</h2>
+        <p>This environment runs SQLite, which is near-identical to MySQL for everything you will be tested on. The handful of differences:</p>
+        <table class="docs-table">
+          <tr><th>Task</th><th>SQLite (here)</th><th>MySQL</th></tr>
+          <tr><td>Date math</td><td><code>date(d, '-30 days')</code></td><td><code>DATE_SUB(d, INTERVAL 30 DAY)</code></td></tr>
+          <tr><td>Concatenate</td><td><code>a || b</code></td><td><code>CONCAT(a, b)</code></td></tr>
+          <tr><td>Quote identifiers</td><td><code>"col"</code> or <code>[col]</code></td><td><code>`col`</code></td></tr>
+          <tr><td>NULL fallback</td><td><code>IFNULL(a,b)</code></td><td><code>IFNULL(a,b)</code> / <code>COALESCE</code></td></tr>
+        </table>
+        <p>Window functions, CTEs, JOINs, <code>GROUP BY</code>, and <code>CASE</code> are identical in both.</p>
+      </div>
+    </div>
+  </div>
 </section>
 
 <section class="panel" id="panel-about">
@@ -2672,6 +3182,27 @@ function setCurrentProblem(p) {
     indicator.hidden = true;
     checkBtn.hidden = true;
   }
+  updateProblemNav();
+}
+
+function updateProblemNav() {
+  const prev = document.getElementById('pi-prev');
+  const next = document.getElementById('pi-next');
+  if (!prev || !next) return;
+  const problems = currentModule().problems || [];
+  const idx = currentProblem ? problems.findIndex(p => p.num === currentProblem.num) : -1;
+  prev.disabled = idx <= 0;
+  next.disabled = idx === -1 || idx >= problems.length - 1;
+}
+
+function gotoAdjacentProblem(delta) {
+  const problems = currentModule().problems || [];
+  if (!problems.length) return;
+  let idx = currentProblem ? problems.findIndex(p => p.num === currentProblem.num) : -1;
+  idx += delta;
+  if (idx < 0) idx = 0;
+  if (idx > problems.length - 1) idx = problems.length - 1;
+  loadProblem(problems[idx]);
 }
 
 function compareResults(userExec, solutionExec) {
@@ -2834,9 +3365,34 @@ function setupEditor() {
   });
   cmEditor.setValue(currentModule().defaultQuery || '');
 
+  // --- Resizable editor: restore saved height + keep CodeMirror in sync on drag ---
+  const cmWrap = document.getElementById('editor-cm-wrap');
+  if (cmWrap && typeof ResizeObserver !== 'undefined') {
+    try {
+      const savedH = parseInt(localStorage.getItem('sql_editor_height') || '', 10);
+      if (savedH && savedH >= 120) cmWrap.style.height = savedH + 'px';
+    } catch (e) {}
+    let rsTimer = null;
+    const ro = new ResizeObserver(() => {
+      if (cmEditor) cmEditor.refresh();
+      clearTimeout(rsTimer);
+      rsTimer = setTimeout(() => {
+        try {
+          localStorage.setItem('sql_editor_height',
+            String(Math.round(cmWrap.getBoundingClientRect().height)));
+        } catch (e) {}
+      }, 300);
+    });
+    ro.observe(cmWrap);
+  }
+
   document.getElementById('btn-run').addEventListener('click', runQuery);
   document.getElementById('btn-check').addEventListener('click', checkAnswer);
   document.getElementById('pi-close').addEventListener('click', () => setCurrentProblem(null));
+  const piPrev = document.getElementById('pi-prev');
+  const piNext = document.getElementById('pi-next');
+  if (piPrev) piPrev.addEventListener('click', () => gotoAdjacentProblem(-1));
+  if (piNext) piNext.addEventListener('click', () => gotoAdjacentProblem(1));
   document.getElementById('btn-clear').addEventListener('click', () => {
     cmEditor.setValue('');
     cmEditor.focus();
@@ -4174,6 +4730,30 @@ document.querySelectorAll('.tab').forEach(tab => {
     }
   });
 });
+
+/* ============================================================
+   SQL REFERENCE — active nav link highlighting
+   ============================================================ */
+(function setupDocsNav() {
+  const nav = document.getElementById('docs-nav');
+  if (!nav) return;
+  const links = Array.from(nav.querySelectorAll('a'));
+  const sections = links
+    .map(a => document.querySelector(a.getAttribute('href')))
+    .filter(Boolean);
+  function onScroll() {
+    if (!document.getElementById('panel-docs').classList.contains('active')) return;
+    let current = sections[0];
+    for (const s of sections) {
+      if (s.getBoundingClientRect().top <= 120) current = s; else break;
+    }
+    links.forEach(a => a.classList.toggle('active',
+      a.getAttribute('href') === '#' + (current ? current.id : '')));
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  nav.addEventListener('click', () => setTimeout(onScroll, 50));
+  onScroll();
+})();
 
 /* ============================================================
    BOOT
