@@ -1118,6 +1118,12 @@
     color: var(--ink);
     font-weight: 500;
   }
+  .practice-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin: -10px 0 22px;
+  }
+  #btn-reset-statuses { font-size: 12.5px; }
   .difficulty-group { margin-bottom: 32px; }
   .difficulty-label {
     font-size: 12px;
@@ -1624,6 +1630,7 @@
         <div class="editor-actions">
           <button class="btn ghost" id="btn-clear">Clear</button>
           <button class="btn ghost" id="btn-reset">Reset DB</button>
+          <button class="btn ghost js-reset-statuses" id="btn-reset-statuses-q" title="Clear all completed and attempted checkmarks for the current role">↺ Reset checkmarks</button>
           <button class="btn check" id="btn-check" hidden>Check Answer</button>
           <button class="btn" id="btn-run">Run<span class="shortcut">⌘↵</span></button>
         </div>
@@ -1648,6 +1655,9 @@
   <p class="practice-intro">
     Thirty problems per role, organized by difficulty. Each one mirrors a question an analyst gets asked in real life. Click <em>Load into Editor</em> (or use the dropdown in the Query tab), write your query, then hit <em>Check Answer</em> — it compares your output against the expected result and tells you what's off. Completed problems get a green check, attempted ones get yellow.
   </p>
+  <div class="practice-toolbar">
+    <button class="btn ghost" id="btn-reset-statuses" title="Clear all completed and attempted checkmarks for the current role">↺ Reset all checkmarks</button>
+  </div>
   <div id="practice-list"></div>
 </section>
 
@@ -2847,6 +2857,16 @@ function resetProgress() {
   renderProblemLoader();
 }
 
+function resetCurrentRoleProgress() {
+  const name = currentModule().name;
+  if (!confirm('Clear all checkmarks for ' + name + '? Every completed and attempted status for this role will be removed.')) return;
+  if (problemStatus[currentModuleKey]) delete problemStatus[currentModuleKey];
+  saveState();
+  renderPracticeProblems();
+  renderProblemLoader();
+  if (typeof updateProblemNav === 'function') updateProblemNav();
+}
+
 /* ============================================================
    PROBLEM STATUS TRACKING (per module, persisted)
    ============================================================ */
@@ -3426,6 +3446,8 @@ function setupEditor() {
   // Reset progress button (About tab)
   const resetBtn = document.getElementById('btn-reset-progress');
   if (resetBtn) resetBtn.addEventListener('click', resetProgress);
+  document.querySelectorAll('#btn-reset-statuses, .js-reset-statuses').forEach(
+    b => b.addEventListener('click', resetCurrentRoleProgress));
 
   // Theme toggle
   const themeBtn = document.getElementById('btn-theme');
