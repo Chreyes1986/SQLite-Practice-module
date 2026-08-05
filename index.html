@@ -12,6 +12,8 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
 
 <script>
@@ -1415,6 +1417,35 @@
   }
   .docs-table td code { white-space: nowrap; }
 
+  /* --- Autocomplete dropdown (theme-matched) --- */
+  .CodeMirror-hints {
+    position: absolute;
+    z-index: 20;
+    overflow-y: auto;
+    max-height: 260px;
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    background: var(--surface);
+    border: 1px solid var(--surface-3);
+    border-radius: var(--r-sm);
+    box-shadow: var(--shadow-md);
+  }
+  .CodeMirror-hint {
+    margin: 0;
+    padding: 4px 10px;
+    border-radius: 3px;
+    white-space: pre;
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+  li.CodeMirror-hint-active {
+    background: var(--blue);
+    color: #ffffff;
+  }
+
   /* --- Resizable editor wrapper --- */
   .editor-cm-wrap {
     position: relative;
@@ -1570,6 +1601,7 @@
       <option value="clinical_ops">Clinical Operations</option>
       <option value="financial">Financial Analysis</option>
       <option value="marketing">Marketing Analytics</option>
+      <option value="operations">Operations Analytics</option>
     </select>
     <span class="module-description" id="module-description"></span>
   </div>
@@ -2575,6 +2607,239 @@ function generateMarketingData() {
 }
 
 /* ============================================================
+   OPERATIONS ANALYTICS MODULE (Club Compliance)
+   ============================================================ */
+const SCHEMA_OPERATIONS = `
+CREATE TABLE owners (
+  owner_id    INTEGER PRIMARY KEY,
+  first_name  TEXT NOT NULL,
+  last_name   TEXT NOT NULL,
+  join_date   DATE NOT NULL,
+  home_state  TEXT NOT NULL,
+  member_tier TEXT NOT NULL,
+  status      TEXT NOT NULL
+);
+CREATE TABLE resorts (
+  resort_id   INTEGER PRIMARY KEY,
+  resort_name TEXT NOT NULL,
+  state       TEXT NOT NULL,
+  region      TEXT NOT NULL
+);
+CREATE TABLE agents (
+  agent_id   INTEGER PRIMARY KEY,
+  agent_name TEXT NOT NULL,
+  department TEXT NOT NULL,
+  hire_date  DATE NOT NULL
+);
+CREATE TABLE contracts (
+  contract_id      INTEGER PRIMARY KEY,
+  owner_id         INTEGER NOT NULL,
+  purchase_date    DATE NOT NULL,
+  points_allotment INTEGER NOT NULL,
+  sales_channel    TEXT NOT NULL,
+  contract_status  TEXT NOT NULL,
+  FOREIGN KEY (owner_id) REFERENCES owners(owner_id)
+);
+CREATE TABLE point_accounts (
+  account_id      INTEGER PRIMARY KEY,
+  owner_id        INTEGER NOT NULL,
+  use_year        INTEGER NOT NULL,
+  points_allotted INTEGER NOT NULL,
+  points_used     INTEGER NOT NULL,
+  points_banked   INTEGER NOT NULL,
+  points_borrowed INTEGER NOT NULL,
+  FOREIGN KEY (owner_id) REFERENCES owners(owner_id)
+);
+CREATE TABLE bookings (
+  booking_id      INTEGER PRIMARY KEY,
+  owner_id        INTEGER NOT NULL,
+  resort_id       INTEGER NOT NULL,
+  check_in        DATE NOT NULL,
+  check_out       DATE NOT NULL,
+  nights          INTEGER NOT NULL,
+  points_redeemed INTEGER NOT NULL,
+  booking_channel TEXT NOT NULL,
+  guest_name      TEXT NOT NULL,
+  created_at      DATE NOT NULL,
+  FOREIGN KEY (owner_id) REFERENCES owners(owner_id),
+  FOREIGN KEY (resort_id) REFERENCES resorts(resort_id)
+);
+CREATE TABLE contact_center_calls (
+  call_id      INTEGER PRIMARY KEY,
+  owner_id     INTEGER NOT NULL,
+  agent_id     INTEGER NOT NULL,
+  call_date    DATE NOT NULL,
+  call_type    TEXT NOT NULL,
+  duration_sec INTEGER NOT NULL,
+  consent_flag INTEGER NOT NULL,
+  dnc_flag     INTEGER NOT NULL,
+  disposition  TEXT NOT NULL,
+  FOREIGN KEY (owner_id) REFERENCES owners(owner_id),
+  FOREIGN KEY (agent_id) REFERENCES agents(agent_id)
+);
+CREATE TABLE third_party_activity (
+  activity_id   INTEGER PRIMARY KEY,
+  owner_id      INTEGER NOT NULL,
+  partner_name  TEXT NOT NULL,
+  activity_type TEXT NOT NULL,
+  activity_date DATE NOT NULL,
+  flagged       INTEGER NOT NULL,
+  FOREIGN KEY (owner_id) REFERENCES owners(owner_id)
+);
+CREATE TABLE compliance_cases (
+  case_id     INTEGER PRIMARY KEY,
+  owner_id    INTEGER NOT NULL,
+  category    TEXT NOT NULL,
+  severity    TEXT NOT NULL,
+  opened_date DATE NOT NULL,
+  closed_date DATE,
+  status      TEXT NOT NULL,
+  assigned_to TEXT NOT NULL,
+  FOREIGN KEY (owner_id) REFERENCES owners(owner_id)
+);
+`;
+
+const REF_OPERATIONS = {
+  states: ['FL','CA','TX','NY','NV','AZ','CO','GA','NC','IL','WA','VA'],
+  resorts: [
+    [1,'Palm Grove Resort','FL','East'],
+    [2,'Coral Bay Club','FL','East'],
+    [3,'Sunset Dunes','CA','West'],
+    [4,'Pacific Terrace','CA','West'],
+    [5,'Desert Springs','AZ','West'],
+    [6,'Red Rock Retreat','NV','West'],
+    [7,'Lakeshore Lodge','IL','Central'],
+    [8,'Bluegrass Manor','GA','East'],
+    [9,'Smoky Ridge','NC','East'],
+    [10,'Alpine Summit','CO','Central'],
+    [11,'Harbor Point','WA','West'],
+    [12,'Isla Verde','INTL','International'],
+  ],
+  tiers: [['Standard',55],['Preferred',30],['Presidential',15]],
+  ownerStatus: [['Active',80],['Suspended',8],['Cancelled',12]],
+  salesChannels: ['In-Person','Call Center','Online','Partner'],
+  contractStatus: [['Active',80],['Rescinded',8],['Defaulted',12]],
+  callTypes: [['Outbound Sales',40],['Inbound Service',45],['Retention',15]],
+  dispositions: ['Sale','No Sale','Callback','Complaint'],
+  agentDepts: ['Sales','Retention','Owner Services'],
+  partners: ['VacayResale','TimeshareList','ExitGroup LLC','OwnerSwap','RentMyWeek','ThirdShore Brokers'],
+  activityTypes: ['Listing','Rental','Transfer'],
+  caseCategories: ['Point Abuse','Unauthorized Rental','TCPA','Sales Practice'],
+  severities: [['Low',45],['Medium',35],['High',20]],
+  caseStatus: [['Open',35],['Under Review',20],['Closed',45]],
+  renterGuests: ['Vacation Rentals LLC','Sunshine Getaways','BookIt Travel','Premier Stays','Coastline Holdings'],
+};
+
+function generateOperationsData() {
+  const data = { owners: [], resorts: [], agents: [], contracts: [], point_accounts: [],
+                 bookings: [], contact_center_calls: [], third_party_activity: [], compliance_cases: [] };
+
+  for (const r of REF_OPERATIONS.resorts) data.resorts.push(r.slice());
+
+  for (let aid = 1; aid <= 15; aid++) {
+    data.agents.push([aid, pick(FIRST_NAMES) + ' ' + pick(LAST_NAMES),
+                      pick(REF_OPERATIONS.agentDepts), dateAdd('2015-01-01', randInt(0, 3500))]);
+  }
+
+  const NOWN = 120;
+  for (let oid = 1; oid <= NOWN; oid++) {
+    data.owners.push([oid, pick(FIRST_NAMES), pick(LAST_NAMES),
+                      dateAdd('2015-01-01', randInt(0, 3800)),
+                      pick(REF_OPERATIONS.states),
+                      pickWeighted(REF_OPERATIONS.tiers),
+                      pickWeighted(REF_OPERATIONS.ownerStatus)]);
+  }
+
+  const tierPoints = { Standard: [100000,200000], Preferred: [250000,450000], Presidential: [500000,900000] };
+  let cid = 1;
+  const ownerAllot = {};
+  for (const o of data.owners) {
+    const oid = o[0], tier = o[5];
+    const nC = pickWeighted([[1,70],[2,30]]);
+    let total = 0;
+    for (let k = 0; k < nC; k++) {
+      const [lo, hi] = tierPoints[tier];
+      const pts = Math.round(randInt(lo, hi) / 1000) * 1000;
+      const cs = pickWeighted(REF_OPERATIONS.contractStatus);
+      data.contracts.push([cid++, oid, dateAdd(o[3], randInt(0, 400)), pts,
+                           pick(REF_OPERATIONS.salesChannels), cs]);
+      if (cs === 'Active') total += pts;
+    }
+    ownerAllot[oid] = total || tierPoints[tier][0];
+  }
+
+  let acc = 1;
+  for (const o of data.owners) {
+    const oid = o[0];
+    for (const yr of [2024, 2025]) {
+      const allot = ownerAllot[oid];
+      let used;
+      if (rand() < 0.12) used = Math.round(allot * (1.02 + rand() * 0.25));
+      else used = Math.round(allot * (0.30 + rand() * 0.65));
+      const banked = used < allot ? Math.round((allot - used) * 0.30 * rand()) : 0;
+      const borrowed = used > allot ? used - allot : 0;
+      data.point_accounts.push([acc++, oid, yr, allot, used, banked, borrowed]);
+    }
+  }
+
+  let bid = 1;
+  for (let i = 0; i < 450; i++) {
+    const o = pick(data.owners);
+    const resort = pick(data.resorts);
+    const yr = pick(['2024','2025']);
+    const ci = dateAdd(yr + '-01-01', randInt(0, 364));
+    const nights = pickWeighted([[2,15],[3,25],[4,25],[5,15],[7,20]]);
+    const co = dateAdd(ci, nights);
+    const pts = rand() < 0.05 ? 0 : nights * randInt(8000, 30000);
+    const chan = pickWeighted([['Owner Portal',60],['Call Center',30],['Partner',10]]);
+    const g = rand();
+    let guest;
+    if (g < 0.68) guest = o[1] + ' ' + o[2];
+    else if (g < 0.90) guest = pick(FIRST_NAMES) + ' ' + pick(LAST_NAMES);
+    else guest = pick(REF_OPERATIONS.renterGuests);
+    data.bookings.push([bid++, o[0], resort[0], ci, co, nights, pts, chan, guest, dateAdd(ci, -randInt(5, 120))]);
+  }
+
+  let callId = 1;
+  const agentConsent = {};
+  for (const a of data.agents) agentConsent[a[0]] = 0.60 + rand() * 0.38;
+  for (let i = 0; i < 550; i++) {
+    const o = pick(data.owners);
+    const a = pick(data.agents);
+    const ct = pickWeighted(REF_OPERATIONS.callTypes);
+    const consent = rand() < agentConsent[a[0]] ? 1 : 0;
+    const dnc = (ct === 'Outbound Sales' && rand() < 0.12) ? 1 : 0;
+    const disp = ct === 'Outbound Sales'
+      ? pickWeighted([['Sale',20],['No Sale',60],['Callback',15],['Complaint',5]])
+      : pick(REF_OPERATIONS.dispositions);
+    data.contact_center_calls.push([callId++, o[0], a[0], dateAdd('2025-01-01', randInt(0, 200)),
+                                    ct, randInt(30, 1800), consent, dnc, disp]);
+  }
+
+  let actId = 1;
+  for (let i = 0; i < 90; i++) {
+    const o = pick(data.owners);
+    data.third_party_activity.push([actId++, o[0], pick(REF_OPERATIONS.partners),
+                                    pick(REF_OPERATIONS.activityTypes),
+                                    dateAdd('2024-01-01', randInt(0, 550)),
+                                    rand() < 0.40 ? 1 : 0]);
+  }
+
+  let caseId = 1;
+  for (let i = 0; i < 60; i++) {
+    const o = pick(data.owners);
+    const opened = dateAdd('2024-06-01', randInt(0, 700));
+    const status = pickWeighted(REF_OPERATIONS.caseStatus);
+    const closed = status === 'Closed' ? dateAdd(opened, randInt(5, 120)) : null;
+    data.compliance_cases.push([caseId++, o[0], pick(REF_OPERATIONS.caseCategories),
+                                pickWeighted(REF_OPERATIONS.severities), opened, closed, status,
+                                pick(FIRST_NAMES) + ' ' + pick(LAST_NAMES)]);
+  }
+
+  return data;
+}
+
+/* ============================================================
    TABLE METADATA — descriptions used in Schema tab + sidebar
    ============================================================ */
 const TABLE_META_CLINICAL = {
@@ -2756,6 +3021,88 @@ const TABLE_META_MARKETING = {
   ]},
 };
 
+const TABLE_META_OPERATIONS = {
+  owners: { desc: 'Vacation-club members. member_tier: Standard, Preferred, Presidential. status: Active, Suspended, Cancelled.', cols: [
+    { name: 'owner_id', type: 'INT PK', pk: true },
+    { name: 'first_name', type: 'TEXT' },
+    { name: 'last_name', type: 'TEXT' },
+    { name: 'join_date', type: 'DATE' },
+    { name: 'home_state', type: 'TEXT' },
+    { name: 'member_tier', type: 'TEXT' },
+    { name: 'status', type: 'TEXT' },
+  ]},
+  resorts: { desc: 'Resort properties owners can book. region: East, West, Central, International.', cols: [
+    { name: 'resort_id', type: 'INT PK', pk: true },
+    { name: 'resort_name', type: 'TEXT' },
+    { name: 'state', type: 'TEXT' },
+    { name: 'region', type: 'TEXT' },
+  ]},
+  agents: { desc: 'Contact-center agents. department: Sales, Retention, Owner Services.', cols: [
+    { name: 'agent_id', type: 'INT PK', pk: true },
+    { name: 'agent_name', type: 'TEXT' },
+    { name: 'department', type: 'TEXT' },
+    { name: 'hire_date', type: 'DATE' },
+  ]},
+  contracts: { desc: 'Ownership contracts. points_allotment is annual points sold. sales_channel: In-Person, Call Center, Online, Partner.', cols: [
+    { name: 'contract_id', type: 'INT PK', pk: true },
+    { name: 'owner_id', type: 'INT FK', fk: true },
+    { name: 'purchase_date', type: 'DATE' },
+    { name: 'points_allotment', type: 'INT' },
+    { name: 'sales_channel', type: 'TEXT' },
+    { name: 'contract_status', type: 'TEXT' },
+  ]},
+  point_accounts: { desc: 'Annual points ledger per owner. points_used > points_allotted signals over-utilization.', cols: [
+    { name: 'account_id', type: 'INT PK', pk: true },
+    { name: 'owner_id', type: 'INT FK', fk: true },
+    { name: 'use_year', type: 'INT' },
+    { name: 'points_allotted', type: 'INT' },
+    { name: 'points_used', type: 'INT' },
+    { name: 'points_banked', type: 'INT' },
+    { name: 'points_borrowed', type: 'INT' },
+  ]},
+  bookings: { desc: 'Reservations. guest_name is who the stay is booked under; the same name across many owners can signal unauthorized renting.', cols: [
+    { name: 'booking_id', type: 'INT PK', pk: true },
+    { name: 'owner_id', type: 'INT FK', fk: true },
+    { name: 'resort_id', type: 'INT FK', fk: true },
+    { name: 'check_in', type: 'DATE' },
+    { name: 'check_out', type: 'DATE' },
+    { name: 'nights', type: 'INT' },
+    { name: 'points_redeemed', type: 'INT' },
+    { name: 'booking_channel', type: 'TEXT' },
+    { name: 'guest_name', type: 'TEXT' },
+    { name: 'created_at', type: 'DATE' },
+  ]},
+  contact_center_calls: { desc: 'Call logs. consent_flag = recorded consent captured; dnc_flag = number on Do-Not-Call list (TCPA risk).', cols: [
+    { name: 'call_id', type: 'INT PK', pk: true },
+    { name: 'owner_id', type: 'INT FK', fk: true },
+    { name: 'agent_id', type: 'INT FK', fk: true },
+    { name: 'call_date', type: 'DATE' },
+    { name: 'call_type', type: 'TEXT' },
+    { name: 'duration_sec', type: 'INT' },
+    { name: 'consent_flag', type: 'INT' },
+    { name: 'dnc_flag', type: 'INT' },
+    { name: 'disposition', type: 'TEXT' },
+  ]},
+  third_party_activity: { desc: 'External reseller / transfer activity. flagged = 1 marks a potential rule violation.', cols: [
+    { name: 'activity_id', type: 'INT PK', pk: true },
+    { name: 'owner_id', type: 'INT FK', fk: true },
+    { name: 'partner_name', type: 'TEXT' },
+    { name: 'activity_type', type: 'TEXT' },
+    { name: 'activity_date', type: 'DATE' },
+    { name: 'flagged', type: 'INT' },
+  ]},
+  compliance_cases: { desc: 'Investigation cases. category, severity, and status (Open, Under Review, Closed). closed_date is NULL while open.', cols: [
+    { name: 'case_id', type: 'INT PK', pk: true },
+    { name: 'owner_id', type: 'INT FK', fk: true },
+    { name: 'category', type: 'TEXT' },
+    { name: 'severity', type: 'TEXT' },
+    { name: 'opened_date', type: 'DATE' },
+    { name: 'closed_date', type: 'DATE' },
+    { name: 'status', type: 'TEXT' },
+    { name: 'assigned_to', type: 'TEXT' },
+  ]},
+};
+
 /* ============================================================
    MODULE REGISTRY
    ============================================================ */
@@ -2791,6 +3138,17 @@ const MODULES = {
     defaultOpenTables: [],
     generateData: generateMarketingData,
     get problems() { return typeof PROBLEMS_MARKETING !== 'undefined' ? PROBLEMS_MARKETING : []; },
+    defaultQuery: '',
+  },
+  operations: {
+    name: 'Operations Analytics',
+    description: 'Vacation-club compliance operations: owners, contracts, point utilization, bookings, contact-center calls, third-party activity, and investigation cases.',
+    schemaSQL: SCHEMA_OPERATIONS,
+    tableMeta: TABLE_META_OPERATIONS,
+    tableOrder: ['owners','resorts','agents','contracts','point_accounts','bookings','contact_center_calls','third_party_activity','compliance_cases'],
+    defaultOpenTables: [],
+    generateData: generateOperationsData,
+    get problems() { return typeof PROBLEMS_OPERATIONS !== 'undefined' ? PROBLEMS_OPERATIONS : []; },
     defaultQuery: '',
   },
 };
@@ -3367,6 +3725,70 @@ function showCheckResult(r, userExec) {
   body.innerHTML = html;
 }
 
+const SQL_KEYWORDS = new Set([
+  'select','from','where','group','by','having','order','limit','offset','distinct','as',
+  'join','inner','left','right','outer','full','cross','on','using','natural',
+  'and','or','not','in','between','like','is','null','exists','case','when','then','else','end',
+  'union','all','intersect','except','asc','desc','with','recursive',
+  'over','partition','rows','range','unbounded','preceding','following','current','row',
+  'insert','into','values','update','set','delete','create','table','view','index','drop','alter',
+  'add','primary','key','foreign','references','default','check','unique','constraint',
+  'cast','count','sum','avg','min','max','round','abs','floor','ceil','coalesce','ifnull','nullif',
+  'substr','substring','length','upper','lower','replace','trim','instr','concat',
+  'strftime','julianday','date','datetime','time','now',
+  'rank','dense_rank','row_number','ntile','lag','lead','first_value','last_value',
+]);
+// Uppercase display list for the autocomplete keyword suggestions
+const SQL_KEYWORDS_UPPER = Array.from(SQL_KEYWORDS).map(k => k.toUpperCase());
+
+// Auto-capitalize the keyword immediately before the cursor (a boundary char was just typed)
+function capitalizeKeywordBefore(cm) {
+  const cur = cm.getCursor();
+  if (cur.ch < 2) return;
+  const line = cm.getLine(cur.line);
+  const uptoBoundary = line.slice(0, cur.ch - 1); // exclude the boundary char just typed
+  const m = uptoBoundary.match(/([A-Za-z_][A-Za-z0-9_]*)$/);
+  if (!m) return;
+  const word = m[1];
+  if (word === word.toUpperCase()) return;               // already uppercase
+  if (!SQL_KEYWORDS.has(word.toLowerCase())) return;      // not a keyword/function
+  const endCh = cur.ch - 1;
+  const startCh = endCh - word.length;
+  const tok = cm.getTokenAt({ line: cur.line, ch: endCh });
+  if (tok && (tok.type === 'string' || tok.type === 'string-2' || tok.type === 'comment')) return;
+  cm.replaceRange(word.toUpperCase(),
+                  { line: cur.line, ch: startCh },
+                  { line: cur.line, ch: endCh }, '+caps');
+}
+
+// Autocomplete: columns (tagged with their table), then tables, then keywords — filtered by prefix
+function sqlColumnHint(cm) {
+  const cur = cm.getCursor();
+  const tok = cm.getTokenAt(cur);
+  let start = tok.start, end = cur.ch;
+  let word = tok.string.slice(0, end - tok.start);
+  if (!/[A-Za-z0-9_$]/.test(word)) { word = ''; start = cur.ch; }
+  const wl = word.toLowerCase();
+  const list = [];
+  const meta = (typeof currentModule === 'function' && currentModule().tableMeta) || {};
+  const seenCol = new Set();
+  for (const [t, info] of Object.entries(meta)) {
+    for (const c of (info.cols || [])) {
+      if ((!wl || c.name.toLowerCase().startsWith(wl)) && !seenCol.has(c.name)) {
+        seenCol.add(c.name);
+        list.push({ text: c.name, displayText: c.name + '   · ' + t });
+      }
+    }
+  }
+  for (const t of Object.keys(meta)) {
+    if (!wl || t.toLowerCase().startsWith(wl)) list.push({ text: t, displayText: t + '   · table' });
+  }
+  for (const k of SQL_KEYWORDS_UPPER) {
+    if (!wl || k.toLowerCase().startsWith(wl)) list.push({ text: k, displayText: k });
+  }
+  return { list, from: CodeMirror.Pos(cur.line, start), to: CodeMirror.Pos(cur.line, end) };
+}
+
 function setupEditor() {
   cmEditor = CodeMirror.fromTextArea(document.getElementById('editor'), {
     mode: 'text/x-sql',
@@ -3381,9 +3803,21 @@ function setupEditor() {
       'Ctrl-Enter': runQuery,
       'Shift-Cmd-Enter': () => { if (currentProblem) checkAnswer(); },
       'Shift-Ctrl-Enter': () => { if (currentProblem) checkAnswer(); },
+      'Ctrl-Space': cm => cm.showHint({ hint: sqlColumnHint, completeSingle: false }),
+      'Cmd-Space':  cm => cm.showHint({ hint: sqlColumnHint, completeSingle: false }),
     },
   });
   cmEditor.setValue(currentModule().defaultQuery || '');
+
+  // --- Auto-capitalize SQL keywords + column-name autocomplete ---
+  cmEditor.on('inputRead', (cm, change) => {
+    const ins = change.text.length === 1 ? change.text[0] : '';
+    if (/[A-Za-z_]/.test(ins)) {
+      cm.showHint({ hint: sqlColumnHint, completeSingle: false });
+    } else if (ins && /[^\w$]/.test(ins)) {
+      capitalizeKeywordBefore(cm);
+    }
+  });
 
   // --- Resizable editor: restore saved height + keep CodeMirror in sync on drag ---
   const cmWrap = document.getElementById('editor-cm-wrap');
@@ -4640,6 +5074,379 @@ ORDER BY lifetime_value DESC;` },
 FROM email_sends
 GROUP BY month
 ORDER BY month;` },
+];
+
+const PROBLEMS_OPERATIONS = [
+  // ---------- BEGINNER ----------
+  { diff: 'beginner', num: 1,
+    title: 'Active owners in Florida',
+    desc: 'List first_name, last_name, and member_tier for every Active owner whose home_state is FL. Sort by last_name.',
+    hint: "WHERE status = 'Active' AND home_state = 'FL'.",
+    sql: `SELECT first_name, last_name, member_tier
+FROM owners
+WHERE status = 'Active' AND home_state = 'FL'
+ORDER BY last_name;` },
+  { diff: 'beginner', num: 2,
+    title: 'Total owners',
+    desc: 'How many owners are in the system? Single number.',
+    hint: 'COUNT(*) on owners.',
+    sql: `SELECT COUNT(*) AS total_owners
+FROM owners;` },
+  { diff: 'beginner', num: 3,
+    title: 'Distinct sales channels',
+    desc: 'Return the distinct list of sales_channel values used on contracts.',
+    hint: 'SELECT DISTINCT.',
+    sql: `SELECT DISTINCT sales_channel
+FROM contracts;` },
+  { diff: 'beginner', num: 4,
+    title: 'Zero-point (comp) stays',
+    desc: 'Find bookings where points_redeemed = 0 — comp stays worth a review. Show booking_id, owner_id, check_in, booking_channel, newest check_in first.',
+    hint: 'WHERE points_redeemed = 0.',
+    sql: `SELECT booking_id, owner_id, check_in, booking_channel
+FROM bookings
+WHERE points_redeemed = 0
+ORDER BY check_in DESC;` },
+  { diff: 'beginner', num: 5,
+    title: 'Largest point redemptions',
+    desc: 'Show the top 10 bookings by points_redeemed: owner_id, resort_id, nights, points_redeemed.',
+    hint: 'ORDER BY points_redeemed DESC LIMIT 10.',
+    sql: `SELECT owner_id, resort_id, nights, points_redeemed
+FROM bookings
+ORDER BY points_redeemed DESC
+LIMIT 10;` },
+  { diff: 'beginner', num: 6,
+    title: 'Do-Not-Call outbound sales calls',
+    desc: 'List outbound sales calls placed to numbers on the Do-Not-Call list. Show call_id, owner_id, agent_id, call_date. (dnc_flag = 1 and call_type = Outbound Sales.)',
+    hint: "WHERE dnc_flag = 1 AND call_type = 'Outbound Sales'.",
+    sql: `SELECT call_id, owner_id, agent_id, call_date
+FROM contact_center_calls
+WHERE dnc_flag = 1 AND call_type = 'Outbound Sales'
+ORDER BY call_date;` },
+  { diff: 'beginner', num: 7,
+    title: 'Resorts in the West region',
+    desc: 'List resort_name, state, region for all resorts in the West region, alphabetized by name.',
+    hint: "WHERE region = 'West'.",
+    sql: `SELECT resort_name, state, region
+FROM resorts
+WHERE region = 'West'
+ORDER BY resort_name;` },
+  { diff: 'beginner', num: 8,
+    title: 'Suspended or cancelled owners',
+    desc: 'List owner_id, first_name, last_name, status for owners whose status is Suspended or Cancelled. Sort by status then last_name.',
+    hint: "WHERE status IN ('Suspended','Cancelled').",
+    sql: `SELECT owner_id, first_name, last_name, status
+FROM owners
+WHERE status IN ('Suspended','Cancelled')
+ORDER BY status, last_name;` },
+  { diff: 'beginner', num: 9,
+    title: 'Count of flagged third-party activity',
+    desc: 'How many third-party activity records are flagged as potential violations? Single number.',
+    hint: 'COUNT(*) WHERE flagged = 1.',
+    sql: `SELECT COUNT(*) AS flagged_activities
+FROM third_party_activity
+WHERE flagged = 1;` },
+  { diff: 'beginner', num: 10,
+    title: 'High-severity open cases',
+    desc: 'List case_id, owner_id, category, opened_date for compliance cases with severity High that are not yet Closed. Oldest first.',
+    hint: "WHERE severity = 'High' AND status <> 'Closed'.",
+    sql: `SELECT case_id, owner_id, category, opened_date
+FROM compliance_cases
+WHERE severity = 'High' AND status <> 'Closed'
+ORDER BY opened_date;` },
+
+  // ---------- INTERMEDIATE ----------
+  { diff: 'intermediate', num: 11,
+    title: 'Point usage per owner (2025)',
+    desc: 'For use_year 2025, show each owner full name, points_allotted, and points_used. Highest usage first.',
+    hint: 'JOIN owners to point_accounts; filter use_year = 2025.',
+    sql: `SELECT o.first_name || ' ' || o.last_name AS owner_name,
+       pa.points_allotted,
+       pa.points_used
+FROM point_accounts pa
+JOIN owners o ON o.owner_id = pa.owner_id
+WHERE pa.use_year = 2025
+ORDER BY pa.points_used DESC;` },
+  { diff: 'intermediate', num: 12,
+    title: 'Over-utilization flag (2025)',
+    desc: 'Find owners who used MORE points than allotted in 2025 (a red flag). Show owner name, points_allotted, points_used, and the overage. Biggest overage first.',
+    hint: 'WHERE points_used > points_allotted.',
+    sql: `SELECT o.first_name || ' ' || o.last_name AS owner_name,
+       pa.points_allotted,
+       pa.points_used,
+       pa.points_used - pa.points_allotted AS overage
+FROM point_accounts pa
+JOIN owners o ON o.owner_id = pa.owner_id
+WHERE pa.use_year = 2025
+  AND pa.points_used > pa.points_allotted
+ORDER BY overage DESC;` },
+  { diff: 'intermediate', num: 13,
+    title: 'Booking volume by region',
+    desc: 'Show total bookings and total nights per resort region, most active region first.',
+    hint: 'JOIN bookings to resorts, GROUP BY region.',
+    sql: `SELECT r.region,
+       COUNT(*)      AS n_bookings,
+       SUM(b.nights) AS total_nights
+FROM bookings b
+JOIN resorts r ON r.resort_id = b.resort_id
+GROUP BY r.region
+ORDER BY n_bookings DESC;` },
+  { diff: 'intermediate', num: 14,
+    title: 'Shared guest names across accounts',
+    desc: 'A guest_name booked under many different owners can signal commercial renting. List guest names used by 2+ distinct owners, with distinct owner count and total bookings, most suspicious first.',
+    hint: 'GROUP BY guest_name HAVING COUNT(DISTINCT owner_id) >= 2.',
+    sql: `SELECT guest_name,
+       COUNT(DISTINCT owner_id) AS distinct_owners,
+       COUNT(*)                 AS total_bookings
+FROM bookings
+GROUP BY guest_name
+HAVING COUNT(DISTINCT owner_id) >= 2
+ORDER BY distinct_owners DESC, total_bookings DESC;` },
+  { diff: 'intermediate', num: 15,
+    title: 'Consent capture rate by agent',
+    desc: 'For outbound sales calls, show each agent name, number of calls, and percent with recorded consent. Only agents with 15+ outbound sales calls; lowest consent rate first.',
+    hint: 'JOIN agents; 100.0 * SUM(consent_flag) / COUNT(*); HAVING COUNT(*) >= 15.',
+    sql: `SELECT a.agent_name,
+       COUNT(*) AS outbound_calls,
+       ROUND(100.0 * SUM(c.consent_flag) / COUNT(*), 1) AS consent_pct
+FROM contact_center_calls c
+JOIN agents a ON a.agent_id = c.agent_id
+WHERE c.call_type = 'Outbound Sales'
+GROUP BY a.agent_id, a.agent_name
+HAVING COUNT(*) >= 15
+ORDER BY consent_pct ASC;` },
+  { diff: 'intermediate', num: 16,
+    title: 'Contract status by sales channel',
+    desc: 'For each sales_channel, show how many contracts are Active, Rescinded, and Defaulted, plus the total. Most contracts first.',
+    hint: 'Conditional aggregation with SUM(CASE WHEN ...).',
+    sql: `SELECT sales_channel,
+       SUM(CASE WHEN contract_status = 'Active'    THEN 1 ELSE 0 END) AS active,
+       SUM(CASE WHEN contract_status = 'Rescinded' THEN 1 ELSE 0 END) AS rescinded,
+       SUM(CASE WHEN contract_status = 'Defaulted' THEN 1 ELSE 0 END) AS defaulted,
+       COUNT(*) AS total
+FROM contracts
+GROUP BY sales_channel
+ORDER BY total DESC;` },
+  { diff: 'intermediate', num: 17,
+    title: 'Average point usage by tier (2025)',
+    desc: 'Per member_tier, show the number of owners and the average points_used in 2025 (rounded, 0 decimals). Highest average first.',
+    hint: 'JOIN owners; GROUP BY member_tier; AVG(points_used).',
+    sql: `SELECT o.member_tier,
+       COUNT(*) AS n_owners,
+       ROUND(AVG(pa.points_used), 0) AS avg_points_used
+FROM point_accounts pa
+JOIN owners o ON o.owner_id = pa.owner_id
+WHERE pa.use_year = 2025
+GROUP BY o.member_tier
+ORDER BY avg_points_used DESC;` },
+  { diff: 'intermediate', num: 18,
+    title: 'Cases by category (open vs total)',
+    desc: 'Per case category, show total cases and how many are still open (status not Closed). Most cases first.',
+    hint: "SUM(CASE WHEN status <> 'Closed' THEN 1 ELSE 0 END).",
+    sql: `SELECT category,
+       COUNT(*) AS total_cases,
+       SUM(CASE WHEN status <> 'Closed' THEN 1 ELSE 0 END) AS open_cases
+FROM compliance_cases
+GROUP BY category
+ORDER BY total_cases DESC;` },
+  { diff: 'intermediate', num: 19,
+    title: 'Bookings and avg points by tier',
+    desc: 'Per member_tier, show number of bookings and average points_redeemed (rounded, 0 decimals). Most bookings first.',
+    hint: 'JOIN bookings to owners; GROUP BY member_tier.',
+    sql: `SELECT o.member_tier,
+       COUNT(*) AS n_bookings,
+       ROUND(AVG(b.points_redeemed), 0) AS avg_points
+FROM bookings b
+JOIN owners o ON o.owner_id = b.owner_id
+GROUP BY o.member_tier
+ORDER BY n_bookings DESC;` },
+  { diff: 'intermediate', num: 20,
+    title: 'Flagged activity by partner',
+    desc: 'Among flagged third-party activity, count records per partner_name. Most flagged first.',
+    hint: 'WHERE flagged = 1; GROUP BY partner_name.',
+    sql: `SELECT partner_name,
+       COUNT(*) AS flagged_activities
+FROM third_party_activity
+WHERE flagged = 1
+GROUP BY partner_name
+ORDER BY flagged_activities DESC;` },
+
+  // ---------- ADVANCED ----------
+  { diff: 'advanced', num: 21,
+    title: 'Rank point usage within tier',
+    desc: 'Within each member_tier, rank owners by 2025 points_used (highest = rank 1). Show owner name, tier, points_used, tier_rank.',
+    hint: 'RANK() OVER (PARTITION BY member_tier ORDER BY points_used DESC).',
+    sql: `SELECT o.first_name || ' ' || o.last_name AS owner_name,
+       o.member_tier,
+       pa.points_used,
+       RANK() OVER (PARTITION BY o.member_tier
+                    ORDER BY pa.points_used DESC) AS tier_rank
+FROM point_accounts pa
+JOIN owners o ON o.owner_id = pa.owner_id
+WHERE pa.use_year = 2025
+ORDER BY o.member_tier, tier_rank;` },
+  { diff: 'advanced', num: 22,
+    title: 'Month-over-month booking trend',
+    desc: 'Count bookings per calendar month (by created_at) and show the change vs. the previous month with LAG. Chronological.',
+    hint: "GROUP BY strftime('%Y-%m', created_at) in a CTE, then LAG.",
+    sql: `WITH monthly AS (
+  SELECT strftime('%Y-%m', created_at) AS ym,
+         COUNT(*) AS n_bookings
+  FROM bookings
+  GROUP BY strftime('%Y-%m', created_at)
+)
+SELECT ym,
+       n_bookings,
+       n_bookings - LAG(n_bookings) OVER (ORDER BY ym) AS mom_change
+FROM monthly
+ORDER BY ym;` },
+  { diff: 'advanced', num: 23,
+    title: 'Top-quartile third-party risk',
+    desc: 'Rank owners into quartiles (NTILE(4)) by their count of flagged third-party activities, and return only the top quartile. Show owner_id, owner name, flagged_count.',
+    hint: 'Aggregate flagged counts in a CTE, then NTILE(4) OVER (ORDER BY flagged_count).',
+    sql: `WITH flagged AS (
+  SELECT owner_id, COUNT(*) AS flagged_count
+  FROM third_party_activity
+  WHERE flagged = 1
+  GROUP BY owner_id
+),
+ranked AS (
+  SELECT owner_id, flagged_count,
+         NTILE(4) OVER (ORDER BY flagged_count) AS quartile
+  FROM flagged
+)
+SELECT r.owner_id,
+       o.first_name || ' ' || o.last_name AS owner_name,
+       r.flagged_count
+FROM ranked r
+JOIN owners o ON o.owner_id = r.owner_id
+WHERE r.quartile = 4
+ORDER BY r.flagged_count DESC;` },
+  { diff: 'advanced', num: 24,
+    title: 'Case aging report',
+    desc: 'For open cases (status not Closed), compute days_open as of today and bucket into Fresh (<30), Aging (30-90), Overdue (>90). Show case_id, category, severity, days_open, age_bucket. Oldest first.',
+    hint: "julianday('now') - julianday(opened_date); CASE for buckets.",
+    sql: `SELECT case_id,
+       category,
+       severity,
+       CAST(julianday('now') - julianday(opened_date) AS INTEGER) AS days_open,
+       CASE
+         WHEN julianday('now') - julianday(opened_date) < 30  THEN 'Fresh'
+         WHEN julianday('now') - julianday(opened_date) <= 90 THEN 'Aging'
+         ELSE 'Overdue'
+       END AS age_bucket
+FROM compliance_cases
+WHERE status <> 'Closed'
+ORDER BY days_open DESC;` },
+  { diff: 'advanced', num: 25,
+    title: 'Cumulative points used per owner',
+    desc: 'For each owner, show use_year, points_used, and a running (cumulative) total of points_used across years. Ordered by owner then year.',
+    hint: 'SUM(points_used) OVER (PARTITION BY owner_id ORDER BY use_year).',
+    sql: `SELECT owner_id,
+       use_year,
+       points_used,
+       SUM(points_used) OVER (PARTITION BY owner_id ORDER BY use_year) AS cumulative_points
+FROM point_accounts
+ORDER BY owner_id, use_year;` },
+  { diff: 'advanced', num: 26,
+    title: 'Share of tier point usage (2025)',
+    desc: 'For 2025, show each owner points_used and their percentage of the total points used by their tier (2 decimals). Order by tier, then pct descending.',
+    hint: 'points_used / SUM(points_used) OVER (PARTITION BY member_tier).',
+    sql: `SELECT o.member_tier,
+       pa.owner_id,
+       pa.points_used,
+       ROUND(100.0 * pa.points_used
+             / SUM(pa.points_used) OVER (PARTITION BY o.member_tier), 2) AS pct_of_tier
+FROM point_accounts pa
+JOIN owners o ON o.owner_id = pa.owner_id
+WHERE pa.use_year = 2025
+ORDER BY o.member_tier, pct_of_tier DESC;` },
+  { diff: 'advanced', num: 27,
+    title: 'Each owner most recent stay',
+    desc: 'Using a window function, return each owner most recent booking: owner_id, resort_id, check_in, points_redeemed. One row per owner.',
+    hint: 'ROW_NUMBER() OVER (PARTITION BY owner_id ORDER BY check_in DESC); keep rn = 1.',
+    sql: `WITH ranked AS (
+  SELECT owner_id, resort_id, check_in, points_redeemed,
+         ROW_NUMBER() OVER (PARTITION BY owner_id ORDER BY check_in DESC) AS rn
+  FROM bookings
+)
+SELECT owner_id, resort_id, check_in, points_redeemed
+FROM ranked
+WHERE rn = 1
+ORDER BY owner_id;` },
+  { diff: 'advanced', num: 28,
+    title: 'Rapid repeat outbound calls (TCPA)',
+    desc: 'Flag owners contacted by outbound sales again within 7 days of a prior outbound sales call. Show owner_id, call_date, and days_since_prev. Uses LAG per owner.',
+    hint: 'LAG(call_date) OVER (PARTITION BY owner_id ORDER BY call_date); julianday difference < 7.',
+    sql: `WITH oc AS (
+  SELECT owner_id, call_date,
+         julianday(call_date) - julianday(
+           LAG(call_date) OVER (PARTITION BY owner_id ORDER BY call_date)
+         ) AS days_since_prev
+  FROM contact_center_calls
+  WHERE call_type = 'Outbound Sales'
+)
+SELECT owner_id,
+       call_date,
+       CAST(days_since_prev AS INTEGER) AS days_since_prev
+FROM oc
+WHERE days_since_prev IS NOT NULL AND days_since_prev < 7
+ORDER BY owner_id, call_date;` },
+  { diff: 'advanced', num: 29,
+    title: 'High-risk owner watchlist',
+    desc: 'Build a watchlist of owners tripping 2+ of three red flags in 2025: (a) point over-utilization, (b) a guest name shared with another owner, (c) an outbound sales call to a DNC number. Show owner name, each flag (0/1), and flags_tripped.',
+    hint: 'One CTE per flag, LEFT JOIN them to owners, then filter the sum >= 2.',
+    sql: `WITH over_util AS (
+  SELECT owner_id
+  FROM point_accounts
+  WHERE use_year = 2025 AND points_used > points_allotted
+),
+shared_guest AS (
+  SELECT DISTINCT b.owner_id
+  FROM bookings b
+  JOIN (
+    SELECT guest_name
+    FROM bookings
+    GROUP BY guest_name
+    HAVING COUNT(DISTINCT owner_id) >= 2
+  ) g ON g.guest_name = b.guest_name
+),
+dnc AS (
+  SELECT DISTINCT owner_id
+  FROM contact_center_calls
+  WHERE dnc_flag = 1 AND call_type = 'Outbound Sales'
+),
+flags AS (
+  SELECT o.owner_id,
+         o.first_name || ' ' || o.last_name AS owner_name,
+         CASE WHEN ou.owner_id IS NOT NULL THEN 1 ELSE 0 END AS f_overutil,
+         CASE WHEN sg.owner_id IS NOT NULL THEN 1 ELSE 0 END AS f_sharedguest,
+         CASE WHEN d.owner_id  IS NOT NULL THEN 1 ELSE 0 END AS f_dnc
+  FROM owners o
+  LEFT JOIN over_util    ou ON ou.owner_id = o.owner_id
+  LEFT JOIN shared_guest sg ON sg.owner_id = o.owner_id
+  LEFT JOIN dnc          d  ON d.owner_id  = o.owner_id
+)
+SELECT owner_name, f_overutil, f_sharedguest, f_dnc,
+       (f_overutil + f_sharedguest + f_dnc) AS flags_tripped
+FROM flags
+WHERE (f_overutil + f_sharedguest + f_dnc) >= 2
+ORDER BY flags_tripped DESC, owner_name;` },
+  { diff: 'advanced', num: 30,
+    title: 'Point-usage deciles (2025)',
+    desc: 'Split owners into deciles (NTILE(10)) by 2025 points_used and label the top decile for review. Show owner_id, points_used, decile, and flag. Highest usage first.',
+    hint: 'NTILE(10) OVER (ORDER BY points_used); CASE WHEN decile = 10.',
+    sql: `WITH usage AS (
+  SELECT owner_id, points_used,
+         NTILE(10) OVER (ORDER BY points_used) AS decile
+  FROM point_accounts
+  WHERE use_year = 2025
+)
+SELECT owner_id,
+       points_used,
+       decile,
+       CASE WHEN decile = 10 THEN 'Top 10% - review' ELSE 'Normal' END AS flag
+FROM usage
+ORDER BY points_used DESC;` },
 ];
 
 function highlightSql(sql) {
